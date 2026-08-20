@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1536" height="1024" viewBox="0 0 1536 1024" role="img" aria-labelledby="title desc">
+  <title id="title">谷仓鲜度轨 · 材料与色彩 · 有秩序的透明</title>
+  <desc id="desc">面向墙面展示和补货判断的方案，强调透明、标签和轨道关系。</desc>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ECE1D1"/><stop offset="1" stop-color="#F9F8F4"/></linearGradient><filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="22" stdDeviation="22" flood-color="#3A3630" flood-opacity=".16"/></filter></defs>
+  <rect width="1536" height="1024" fill="url(#bg)"/><path d="M76 112 H1460 M76 875 H1460" stroke="#3A3630" stroke-width="2" opacity=".15"/><path d="M76 150 V830 M1460 150 V830" stroke="#3A3630" stroke-width="2" opacity=".08"/>
+  <g font-family="Inter, PingFang SC, Microsoft YaHei, sans-serif" fill="#3A3630"><text x="768" y="955" text-anchor="middle" font-size="18" letter-spacing="2" opacity=".52">谷仓鲜度轨 · 材料与色彩 · 01</text></g>
+  <g filter="url(#shadow)"><rect x="760" y="350" width="430" height="280" rx="46" fill="#ECE1D1" stroke="#C09B65" stroke-width="10"/><path d="M780 600 L1160 380" stroke="#C09B65" stroke-width="48" opacity=".8"/><circle cx="850" cy="720" r="46" fill="#ECE1D1" stroke="#3A3630" stroke-width="8"/><circle cx="960" cy="720" r="46" fill="#C09B65"/><circle cx="1070" cy="720" r="46" fill="#3A3630" opacity=".82"/></g><g fill="none" stroke="#3A3630" stroke-width="2" opacity=".14"><path d="M1200 190 h180 v180 h-180z"/><path d="M1260 190v180 M1200 250h180"/></g>
+</svg>

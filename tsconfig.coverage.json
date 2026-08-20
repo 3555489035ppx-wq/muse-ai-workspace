@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "allowJs": false,
+    "composite": false,
+    "noEmit": false,
+    "outDir": "coverage/phase0-build",
+    "rootDir": ".",
+    "sourceMap": false,
+    "tsBuildInfoFile": null
+  },
+  "include": [
+    "src/**/*.ts",
+    "tests/repositories/base.test.ts",
+    "tests/db/asset-storage.test.ts",
+    "tests/db/migration-service.test.ts",
+    "tests/services/traceability.test.ts",
+    "tests/services/project-lifecycle.test.ts",
+    "tests/services/project-workflow.test.ts",
+    "tests/phase0/core-paths.test.ts"
+  ],
+  "exclude": [
+    "src/**/*.tsx",
+    "src/**/*.js",
+    "src/**/*.jsx"
+  ]
+}

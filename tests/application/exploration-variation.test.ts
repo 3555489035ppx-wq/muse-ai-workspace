@@ -1,0 +1,5 @@
+import assert from "node:assert/strict"; import test from "node:test";
+import { validateVariationAxisValues, variationDifferenceCount, VariationAxisError, type VariationAxisValue } from "../../src/application/exploration/index.js";
+const a: readonly VariationAxisValue[] = [{ axis: "composition", value: "中心" }, { axis: "color", value: "暖色" }];
+void test("variation axes validate and count expression differences", () => { assert.equal(validateVariationAxisValues(a), a); assert.equal(variationDifferenceCount(a, [{ axis: "composition", value: "边缘" }, { axis: "lighting", value: "侧光" }]), 3); });
+void test("variation axes reject empty, duplicate and unknown values", () => { assert.throws(() => validateVariationAxisValues([{ axis: "color", value: " " }]), VariationAxisError); assert.throws(() => validateVariationAxisValues([{ axis: "color", value: "red" }, { axis: "color", value: "blue" }]), VariationAxisError); assert.throws(() => validateVariationAxisValues([{ axis: "motion" as "color", value: "fast" }]), VariationAxisError); });

@@ -1,0 +1,35 @@
+.moodboard-page { width: min(1440px, 100%); min-width: 0; margin: 0 auto; padding: 32px var(--muse-page-gutter) 56px; overflow-x: hidden; }
+.moodboard-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 20px; align-items: start; padding-bottom: 28px; border-bottom: 1px solid var(--muse-border-subtle); }
+.moodboard-heading p, .moodboard-territory > header span, .visual-dna > div > span { margin: 0 0 8px; color: var(--muse-focus); font-size: 12px; font-weight: 720; letter-spacing: .07em; }
+.moodboard-heading h1 { margin: 0 0 10px; color: var(--muse-text-primary); font-family: var(--muse-font-display); font-size: var(--muse-type-page-title); }
+.moodboard-heading span { color: var(--muse-text-secondary); }
+.moodboard-territory { margin-top: 28px; }
+.moodboard-territory > header { display: flex; gap: 20px; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; }
+.moodboard-territory h2 { margin: 0 0 12px; color: var(--muse-text-primary); font-family: var(--muse-font-display); font-size: var(--muse-type-section-title); }
+.moodboard-upload { position: relative; display: inline-flex; gap: 8px; align-items: center; min-height: var(--muse-control-height-default); padding: 0 14px; color: var(--muse-text-primary); border: 1px solid var(--muse-border); border-radius: var(--muse-radius-control); background: var(--muse-surface); cursor: pointer; }
+.moodboard-upload input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.moodboard-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+.moodboard-selection-status { margin: 0 0 12px; color: var(--muse-text-muted); font-size: var(--muse-type-metadata); }
+.moodboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 16px; align-items: start; }
+.moodboard-grid__card { min-width: 0; overflow: hidden; border: 1px solid var(--muse-border); border-radius: var(--muse-radius-card); background: var(--muse-surface); }
+.moodboard-grid__card[data-selected="true"] { border-color: var(--muse-focus); box-shadow: 0 0 0 3px var(--muse-focus-ring); }
+.moodboard-grid__image { position: relative; display: block; width: 100%; min-height: 180px; padding: 0; overflow: hidden; border: 0; border-radius: 0; background: var(--muse-surface-high); }
+.moodboard-grid__image img { display: block; width: 100%; height: 190px; object-fit: cover; }
+.moodboard-grid__image > span { position: absolute; right: 10px; bottom: 10px; left: 10px; padding: 8px 10px; color: var(--muse-text-primary); border-radius: 8px; background: rgb(6 9 12 / 76%); text-align: left; }
+.moodboard-grid__card > div { padding: 14px; }
+.moodboard-grid__card strong { color: var(--muse-text-primary); }
+.moodboard-grid__card p { margin: 7px 0 0; color: var(--muse-text-muted); }
+.visual-dna { position: sticky; top: 88px; display: grid; gap: 20px; padding: 20px; border: 1px solid var(--muse-border); border-radius: var(--muse-radius-panel); background: var(--muse-surface); }
+.visual-dna h3 { margin: 0; color: var(--muse-text-primary); font-family: var(--muse-font-display); font-size: 24px; }
+.visual-dna section { padding-top: 16px; border-top: 1px solid var(--muse-border-subtle); }
+.visual-dna h4 { margin: 0 0 10px; color: var(--muse-text-secondary); font-size: var(--muse-type-label); }
+.visual-dna__palette { display: grid; gap: 8px; }
+.visual-dna__palette > span { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.visual-dna__palette i { width: 30px; height: 30px; border: 1px solid var(--muse-border-strong); border-radius: 8px; }
+.visual-dna__palette b { color: var(--muse-text-secondary); font-size: 13px; }
+.visual-dna__palette small { color: var(--muse-text-muted); font-family: ui-monospace, monospace; }
+.moodboard-lightbox { position: fixed; z-index: var(--muse-layer-modal); inset: 0; display: grid; grid-template-columns: auto minmax(0, 900px) auto; gap: 18px; align-items: center; padding: 40px; background: rgb(4 7 10 / 92%); }
+.moodboard-lightbox > button:first-child { position: absolute; top: 24px; right: 24px; }
+.moodboard-lightbox figure { margin: 0; overflow: hidden; border: 1px solid var(--muse-border); border-radius: var(--muse-radius-panel); background: var(--muse-surface); }
+.moodboard-lightbox img { display: block; width: 100%; max-height: 76vh; object-fit: contain; }
+.moodboard-lightbox figcaption { padding: 14px; color: var(--muse-text-secondary); }

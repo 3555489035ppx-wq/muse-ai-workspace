@@ -1,0 +1,42 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { IDBKeyRange, indexedDB } from "fake-indexeddb";
+import type { ResearchEvidence, ResearchInsight, ResearchObservation, ResearchOpportunity, ResearchSession, ResearchSource, CreativeSeed } from "../../src/domain/research/index.js";
+import type { ProjectScopedEntity } from "../../src/domain/shared/entity.js";
+import { asProjectId, type EntityId } from "../../src/domain/shared/id.js";
+import { createMuseDatabase } from "../../src/db/database.js";
+import { ProjectCreationService } from "../../src/application/project/index.js";
+import { ResearchService } from "../../src/application/research/index.js";
+
+void test("Phase 1.2 gate: Shanxi and Chengdu research differ with complete isolated lineage after reload", async () => {
+  const databaseName = "phase-1-2-gate";
+  const database = createMuseDatabase(databaseName, { dependencies: { indexedDB, IDBKeyRange } });
+  const projectA = asProjectId("31000000-0000-4000-8000-000000000001");
+  const projectB = asProjectId("31000000-0000-4000-8000-000000000002");
+  const a = await new ProjectCreationService(database, { projectIdFactory: () => projectA }).create({ name: "山西文化遗产年轻化视觉传播", description: "以真实文化材料连接年轻受众的视觉传播系统", projectType: "editorial", targetOutputs: ["poster", "social_media"] });
+  const b = await new ProjectCreationService(database, { projectIdFactory: () => projectB }).create({ name: "成都独立咖啡品牌", description: "建立有社区温度和专业风味识别的咖啡品牌", projectType: "brand", targetOutputs: ["brand_identity", "packaging"] });
+  const resultA = await new ResearchService(database).run({ projectId: projectA, briefId: a.briefId, seed: "gate" });
+  const resultB = await new ResearchService(database).run({ projectId: projectB, briefId: b.briefId, seed: "gate" });
+  database.close();
+  const reloaded = createMuseDatabase(databaseName, { dependencies: { indexedDB, IDBKeyRange } });
+  const sessions = await reloaded.table<ResearchSession, EntityId>("researchSessions").toArray();
+  const sources = await reloaded.table<ResearchSource, EntityId>("researchSources").toArray();
+  const observations = await reloaded.table<ResearchObservation, EntityId>("researchObservations").toArray();
+  const insights = await reloaded.table<ResearchInsight, EntityId>("researchInsights").toArray();
+  const opportunities = await reloaded.table<ResearchOpportunity, EntityId>("researchOpportunities").toArray();
+  const seeds = await reloaded.table<CreativeSeed, EntityId>("creativeSeeds").toArray();
+  const byProject = <T extends { readonly projectId: string }>(items: readonly T[], projectId: string) => items.filter((item) => item.projectId === projectId);
+  const assertBothProjects = (items: readonly ProjectScopedEntity[]) => {
+    assert.equal(byProject(items, projectA).length > 0, true);
+    assert.equal(byProject(items, projectB).length > 0, true);
+  };
+  assert.equal(sessions.length, 2);
+  assert.notEqual(sessions.find((item) => item.id === resultA.researchSessionId)?.query, sessions.find((item) => item.id === resultB.researchSessionId)?.query);
+  for (const items of [sources, observations, insights, opportunities, seeds]) assertBothProjects(items);
+  assert.notDeepEqual(byProject(observations, projectA).map((item) => item.statement), byProject(observations, projectB).map((item) => item.statement));
+  assert.notDeepEqual(byProject(opportunities, projectA).map((item) => item.statement), byProject(opportunities, projectB).map((item) => item.statement));
+  assert.notDeepEqual(byProject(seeds, projectA).map((item) => item.title), byProject(seeds, projectB).map((item) => item.title));
+  const evidence = await reloaded.table<ResearchEvidence, EntityId>("researchEvidence").toArray();
+  assert.equal(evidence.every((item) => sources.some((source) => source.id === item.sourceId && source.projectId === item.projectId)), true);
+  reloaded.close();
+});

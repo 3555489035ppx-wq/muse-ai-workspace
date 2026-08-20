@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Muse">
+  <rect width="64" height="64" rx="14" fill="#080A0F"/>
+  <g fill="none" stroke="#DFE3E8" stroke-linecap="round">
+    <path d="M32 10v12M32 42v12M10 32h12M42 32h12" stroke-width="4"/>
+    <rect x="24" y="24" width="16" height="16" rx="5" stroke="#7F9FD3" stroke-width="3.5" transform="rotate(45 32 32)"/>
+    <circle cx="32" cy="32" r="3.5" fill="#D92786" stroke="none"/>
+  </g>
+</svg>

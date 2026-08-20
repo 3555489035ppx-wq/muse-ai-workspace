@@ -1,0 +1,6 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { GenerationProviderError, requireGenerationCapability, validateGenerationEvent } from "../../src/application/generation/index.js";
+const metadata = { id: "mock", label: "Muse Mock", mock: true, capabilities: ["generate", "cancel", "retry"] as const };
+void test("generation capability negotiation is explicit", () => { assert.doesNotThrow(() => { requireGenerationCapability(metadata, "generate"); }); assert.throws(() => { requireGenerationCapability(metadata, "edit"); }, GenerationProviderError); });
+void test("generation event guards accept valid progress/results and reject invalid payloads", () => { assert.equal(validateGenerationEvent({ type: "progress", progress: 50, message: "处理中" }).type, "progress"); assert.equal(validateGenerationEvent({ type: "result", result: { fixtureKey: "fixture", mimeType: "image/webp", width: 1200, height: 900, seed: "fixed", byteSize: 100 } }).type, "result"); assert.throws(() => validateGenerationEvent({ type: "progress", progress: 101, message: "bad" }), GenerationProviderError); assert.throws(() => validateGenerationEvent({ type: "error", code: "", message: "" }), GenerationProviderError); });

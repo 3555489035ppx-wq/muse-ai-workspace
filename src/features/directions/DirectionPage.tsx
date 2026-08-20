@@ -1,0 +1,31 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
+import { buildDirectionComparison, DirectionCommandService, DirectionLibraryService } from "../../application/direction/index.js";
+import type { Direction } from "../../domain/direction/index.js";
+import type { ProjectBrief } from "../../domain/project/index.js";
+import { asProjectId, isEntityId, type EntityId, type ProjectId } from "../../domain/shared/id.js";
+import { getDefaultDatabase, type MuseDatabase } from "../../db/database.js";
+import { DirectionRepository } from "../../repositories/DirectionRepository.js";
+import { DirectionComparisonMatrix } from "./DirectionComparisonMatrix.js";
+import { PhaseOneRuntimeService } from "../../application/runtime/index.js";
+import { AppShell } from "../../components/shell.jsx";
+import { Button, EmptyState, ErrorState, LoadingState, StatusPill, TagList } from "../../components/ui.jsx";
+import { Archive, BookMarked, Check, LockKeyhole, Sparkles, X } from "lucide-react";
+
+export async function loadDirectionPage(projectId: ProjectId, database: MuseDatabase = getDefaultDatabase()) { const directions = await new DirectionRepository(database).listDirectionsByProject(projectId); const brief = await database.table<ProjectBrief, EntityId>("briefs").where("projectId").equals(projectId).first(); return { directions, brief }; }
+export function directionTone(direction: Direction): "order" | "emotion" | "narrative" {
+  const text = `${direction.title}${direction.concept}${direction.visualDNA.keywords.join("")}${direction.visualDNA.principles.join("")}`;
+  if (/秩序|结构|编辑|留白|清晰/.test(text)) return "order";
+  if (/情绪|张力|冲突|感官|能量/.test(text)) return "emotion";
+  return "narrative";
+}
+const directionPreview = { order: "/assets/templates/editorial-series.webp", emotion: "/assets/templates/campaign-key-visual.webp", narrative: "/assets/templates/cultural-brand.webp" } as const;
+export function DirectionPage({ loader = loadDirectionPage, commands, runtime }: { readonly loader?: typeof loadDirectionPage; readonly commands?: DirectionCommandService; readonly runtime?: PhaseOneRuntimeService }) {
+  const { projectId } = useParams(); const service = useMemo(() => commands ?? new DirectionCommandService(), [commands]); const library = useMemo(() => new DirectionLibraryService(), []); const workflow = useMemo(() => runtime ?? new PhaseOneRuntimeService(), [runtime]); const [data, setData] = useState<Awaited<ReturnType<typeof loadDirectionPage>>>(); const [error, setError] = useState(""); const [running, setRunning] = useState(false);
+  const reload = async () => { if (!isEntityId(projectId)) { setError("项目链接无效"); return; } setData(await loader(asProjectId(projectId))); };
+  useEffect(() => { void reload().catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "方向加载失败")); }, [loader, projectId]);
+  if (error) return <AppShell><main className="directions-page"><ErrorState title="创意方向加载失败" description={error} /></main></AppShell>; if (!data) return <AppShell><main className="directions-page"><LoadingState title="正在读取创意方向" description="正在恢复候选、比较证据与锁定状态。" /></main></AppShell>;
+  const act = async (action: "select" | "reject" | "archive" | "lock", id: EntityId) => { if (!isEntityId(projectId)) return; try { await service[action](asProjectId(projectId), id); await reload(); } catch (reason: unknown) { setError(reason instanceof Error ? reason.message : "方向操作失败"); } };
+  const comparison = data.brief && data.directions.length === 3 ? buildDirectionComparison(asProjectId(projectId!), data.directions, data.brief) : undefined;
+  return <AppShell><main className="directions-page" aria-labelledby="directions-title"><header className="directions-heading"><div><p>Research → Moodboard → Creative Direction</p><h1 id="directions-title">创意方向比较</h1><span>三个方向共享同一研究基础，但分别强调秩序、情绪与叙事。比较证据后，只锁定一个方向继续探索。</span></div><StatusPill status="ai">离线确定性方向</StatusPill></header>{data.directions.length === 0 ? <EmptyState title="从研究与 Visual DNA 生成方向" description="Muse 会生成三个语义和视觉策略真正不同的候选方向。" action={<Button icon={Sparkles} loading={running} disabled={!isEntityId(projectId)} onClick={() => { if (!isEntityId(projectId)) return; setRunning(true); void workflow.generateDirections(asProjectId(projectId)).then(reload).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "方向生成失败")).finally(() => setRunning(false)); }}>生成创意方向</Button>} /> : <><div className="direction-grid">{data.directions.map((direction) => { const tone = directionTone(direction); return <article key={direction.id} className="direction-card" data-tone={tone} data-status={direction.status}><div className="direction-card__visual"><img src={directionPreview[tone]} alt="" /><StatusPill status={direction.status === "locked" ? "success" : direction.status === "rejected" ? "warn" : "ai"}>{direction.status === "locked" ? "已锁定" : direction.status === "rejected" ? "已排除" : "候选方向"}</StatusPill></div><div className="direction-card__body"><span className="direction-card__mode">{tone === "order" ? "秩序驱动" : tone === "emotion" ? "情绪驱动" : "叙事驱动"}</span><h2>{direction.title}</h2><p className="direction-card__concept">{direction.concept}</p><blockquote>{direction.narrative}</blockquote><section><h3>Visual DNA</h3><TagList items={direction.visualDNA.keywords} /></section><dl><dt>设计原则</dt><dd>{direction.visualDNA.principles.join(" · ")}</dd><dt>优势</dt><dd>{direction.advantages.join(" · ")}</dd><dt>风险</dt><dd>{direction.risks.join(" · ")}</dd></dl><div className="direction-card__actions"><Button variant="quiet" icon={Check} onClick={() => void act("select", direction.id)}>选择</Button><Button variant="quiet" icon={X} onClick={() => void act("reject", direction.id)}>排除</Button><Button variant="quiet" icon={Archive} onClick={() => void act("archive", direction.id)}>归档</Button><Button variant="quiet" icon={BookMarked} onClick={() => void library.save(asProjectId(projectId!), direction.id)}>存到方向库</Button><Button icon={LockKeyhole} disabled={direction.status === "rejected"} onClick={() => void act("lock", direction.id)}>锁定方向</Button></div></div></article>; })}</div>{comparison ? <DirectionComparisonMatrix directions={data.directions} comparison={comparison} /> : null}</>}</main></AppShell>;
+}

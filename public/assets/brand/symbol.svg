@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Muse 灵感坐标标志</title>
+  <desc id="desc">四个方向汇聚成中心灵感点的几何标志</desc>
+  <g fill="none" stroke="#DFE3E8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 7v13M32 44v13M7 32h13M44 32h13" stroke-width="4"/>
+    <path d="M20.5 20.5 25 25m14 14 4.5 4.5m0-23L39 25M25 39l-4.5 4.5" stroke-width="3" opacity=".68"/>
+    <rect x="24" y="24" width="16" height="16" rx="5" stroke="#7F9FD3" stroke-width="3.5" transform="rotate(45 32 32)"/>
+    <circle cx="32" cy="32" r="3.5" fill="#D92786" stroke="none"/>
+  </g>
+</svg>

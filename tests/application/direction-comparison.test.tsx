@@ -1,0 +1,16 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import type { Direction } from "../../src/domain/direction/index.js";
+import type { ProjectBrief } from "../../src/domain/project/index.js";
+import { buildDirectionComparison, DirectionComparisonError } from "../../src/application/direction/index.js";
+import { DirectionComparisonMatrix } from "../../src/features/directions/DirectionComparisonMatrix.js";
+import { asEntityId, asProjectId } from "../../src/domain/shared/id.js";
+import { requireIsoTimestamp } from "../../src/domain/shared/time.js";
+const id = (n: number) => asEntityId(`36000000-0000-4000-8000-${String(n).padStart(12, "0")}`); const projectId = asProjectId(id(1)); const now = requireIsoTimestamp("2026-07-28T00:00:00.000Z");
+const brief: ProjectBrief = { id: id(2), projectId, goal: "建立文化品牌识别", audience: "年轻受众", context: "文旅传播", deliverables: ["海报", "数字媒体"], constraints: [], createdAt: now, updatedAt: now };
+const direction = (n: number): Direction => { const label = String(n); return { id: id(10 + n), projectId, researchSessionId: id(3), moodboardId: id(4), visualDNAId: id(5), creativeSeedIds: [id(6)], opportunityIds: [id(7)], title: `方向${label}`, concept: `概念${label}`, narrative: `叙事${label}`, visualDNA: { keywords: [`关键词${label}`], principles: [`composition:构图${label}`, `color:色彩${label}`] }, advantages: ["优势"], risks: [`风险${label}`], status: "candidate", createdAt: now, updatedAt: now }; }; const directions = [direction(1), direction(2), direction(3)] as const;
+void test("comparison is deterministic and every score has source evidence", () => { const a = buildDirectionComparison(projectId, directions, brief); const b = buildDirectionComparison(projectId, directions, brief); assert.deepEqual(a, b); assert.equal(a.scores.length, 21); assert.equal(a.scores.every((score) => score.evidence.length >= 2 && score.rationale.includes("direction:")), true); });
+void test("comparison rejects invalid and cross-project direction sets", () => { assert.throws(() => buildDirectionComparison(projectId, directions.slice(0, 2), brief), DirectionComparisonError); assert.throws(() => buildDirectionComparison(projectId, [{ ...directions[0], projectId: asProjectId(id(99)) }, directions[1], directions[2]], brief), DirectionComparisonError); });
+void test("matrix renders A/B/C across all seven dimensions", () => { const comparison = buildDirectionComparison(projectId, directions, brief); const html = renderToStaticMarkup(createElement(DirectionComparisonMatrix, { directions, comparison })); assert.match(html, /简报一致性/); assert.match(html, /跨媒体/); assert.equal((html.match(/方向[123]/g) ?? []).length, 3); });

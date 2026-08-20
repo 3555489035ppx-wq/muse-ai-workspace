@@ -1,0 +1,19 @@
+/* Portfolio capture mode keeps the real Muse UI while removing development-only chrome. */
+body.portfolio-capture .ai-provider-status,
+body.portfolio-capture .industrial-origin-badge,
+body.portfolio-capture .industrial-provenance,
+body.portfolio-capture .sidebar__footer,
+body.portfolio-capture .toast-stack,
+body.portfolio-capture [data-tour-overlay],
+body.portfolio-capture .react-joyride__overlay {
+  display: none !important;
+}
+
+body.portfolio-capture .industrial-ai-toolbar {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+body.portfolio-capture .industrial-page,
+body.portfolio-capture .app-shell__content {
+  min-width: 0;
+}
