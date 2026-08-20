@@ -104,10 +104,18 @@ function GoddessVisual() {
       aria-label="Muse 女神视觉，表达从灵感到设计方向的转化"
     >
       <div className="landing-goddess-visual__frame">
-        <img
-          src="/assets/brand/muse-goddess-hero.png"
-          alt="Muse 女神肖像，位于深色背景与蓝紫光影中"
-        />
+        <picture>
+          <source media="(max-width: 640px)" srcSet="/assets/brand/muse-goddess-hero-mobile.webp" type="image/webp" />
+          <source srcSet="/assets/brand/muse-goddess-hero.webp" type="image/webp" />
+          <img
+            src="/assets/brand/muse-goddess-hero.webp"
+            alt="Muse 女神肖像，位于深色背景与蓝紫光影中"
+            width="828"
+            height="825"
+            fetchPriority="high"
+            decoding="async"
+          />
+        </picture>
       </div>
     </figure>
   );
@@ -248,6 +256,8 @@ function LandingPage() {
               <img
                 src="/portfolio/muse/screens/02-brief.png"
                 alt="静境空气灯塔项目的设计简报页面"
+                loading="lazy"
+                decoding="async"
               />
               <figcaption>
                 <span>之前</span>
@@ -258,6 +268,8 @@ function LandingPage() {
               <img
                 src="/portfolio/muse/screens/05-direction.png"
                 alt="静境空气灯塔项目的创意方向页面"
+                loading="lazy"
+                decoding="async"
               />
               <figcaption>
                 <span>之后</span>

@@ -4,17 +4,25 @@ import { ToastStack } from "./components/ui";
 import { MigrationService } from "./domain/services/MigrationService";
 import { db } from "./db/database";
 import { Phase0Recovery } from "./features/system/Phase0Recovery";
-import { LandingPage } from "./features/landing/LandingPage";
-import { NewProjectPage, ProjectCreationProgressPage, ProjectsPage } from "./features/projects/ProjectPages";
-import {
-  IndustrialBriefPage, IndustrialCMFPage, IndustrialConceptPage,
-  IndustrialDecisionMapPage, IndustrialDirectionPage, IndustrialInsightPage, IndustrialOverviewPage,
-  IndustrialResearchPage, IndustrialReviewPage,
-  IndustrialVersionsPage,
-} from "./features/industrial/IndustrialPages";
 import { useMuseStore } from "./stores/useMuseStore";
 
 const lazyNamed = (loader, name) => lazy(() => loader().then((module) => ({ default: module[name] })));
+const loadProjectPages = () => import("./features/projects/ProjectPages");
+const loadIndustrialPages = () => import("./features/industrial/IndustrialPages");
+const LandingPage = lazyNamed(() => import("./features/landing/LandingPage"), "LandingPage");
+const NewProjectPage = lazyNamed(loadProjectPages, "NewProjectPage");
+const ProjectCreationProgressPage = lazyNamed(loadProjectPages, "ProjectCreationProgressPage");
+const ProjectsPage = lazyNamed(loadProjectPages, "ProjectsPage");
+const IndustrialBriefPage = lazyNamed(loadIndustrialPages, "IndustrialBriefPage");
+const IndustrialCMFPage = lazyNamed(loadIndustrialPages, "IndustrialCMFPage");
+const IndustrialConceptPage = lazyNamed(loadIndustrialPages, "IndustrialConceptPage");
+const IndustrialDecisionMapPage = lazyNamed(loadIndustrialPages, "IndustrialDecisionMapPage");
+const IndustrialDirectionPage = lazyNamed(loadIndustrialPages, "IndustrialDirectionPage");
+const IndustrialInsightPage = lazyNamed(loadIndustrialPages, "IndustrialInsightPage");
+const IndustrialOverviewPage = lazyNamed(loadIndustrialPages, "IndustrialOverviewPage");
+const IndustrialResearchPage = lazyNamed(loadIndustrialPages, "IndustrialResearchPage");
+const IndustrialReviewPage = lazyNamed(loadIndustrialPages, "IndustrialReviewPage");
+const IndustrialVersionsPage = lazyNamed(loadIndustrialPages, "IndustrialVersionsPage");
 const OnboardingTour = lazyNamed(() => import("./features/onboarding/OnboardingTour"), "OnboardingTour");
 const TemplatesPage = lazyNamed(() => import("./features/library/GlobalLibraryPages"), "TemplatesPage");
 const AssetsPage = lazyNamed(() => import("./features/library/GlobalLibraryPages"), "AssetsPage");
