@@ -253,24 +253,30 @@ function LandingPage() {
 
           <div className="landing-example__grid">
             <figure>
-              <img
-                src="/portfolio/muse/screens/02-brief.png"
-                alt="静境空气灯塔项目的设计简报页面"
-                loading="lazy"
-                decoding="async"
-              />
+              <picture>
+                <source srcSet="/portfolio/muse/screens/02-brief.webp" type="image/webp" />
+                <img
+                  src="/portfolio/muse/screens/02-brief.png"
+                  alt="静境空气灯塔项目的设计简报页面"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </picture>
               <figcaption>
                 <span>之前</span>
                 <strong>模糊需求被整理成一份可以确认的设计简报。</strong>
               </figcaption>
             </figure>
             <figure>
-              <img
-                src="/portfolio/muse/screens/05-direction.png"
-                alt="静境空气灯塔项目的创意方向页面"
-                loading="lazy"
-                decoding="async"
-              />
+              <picture>
+                <source srcSet="/portfolio/muse/screens/05-direction.webp" type="image/webp" />
+                <img
+                  src="/portfolio/muse/screens/05-direction.png"
+                  alt="静境空气灯塔项目的创意方向页面"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </picture>
               <figcaption>
                 <span>之后</span>
                 <strong>洞察变成可比较的方向，并保留每个选择的理由。</strong>
