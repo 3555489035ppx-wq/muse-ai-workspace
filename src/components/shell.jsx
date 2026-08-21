@@ -92,6 +92,7 @@ export function Topbar({ project, onOpenNavigation, contextOpen, onToggleContext
  */
 export function AppShell({ project: projectProp = null, children, context = null, mode = null }) {
   const { projectId } = useParams();
+  const { pathname, search } = useLocation();
   const routeProject = useMuseStore((state) => projectId ? state.projects.find((item) => item.id === projectId) : null);
   const project = projectProp ?? routeProject ?? null;
   const [navOpen, setNavOpen] = useState(false);
@@ -102,6 +103,9 @@ export function AppShell({ project: projectProp = null, children, context = null
     // persist from the global shell and otherwise collapses the active project flow.
     if (mode === 'industrial') document.body.classList.remove('nav-compact');
   }, [mode]);
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [pathname, search]);
   useEffect(() => {
     if (!context) return undefined;
     const syncContextToViewport = () => {
