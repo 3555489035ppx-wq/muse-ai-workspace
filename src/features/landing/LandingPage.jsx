@@ -172,7 +172,7 @@ function LandingPage() {
             </p>
             <div className="landing-hero__actions">
               <Link className="landing-button landing-button--light" to={`/projects/${FEATURED_DEMO_PROJECT_ID}/workspace`}>
-                体验完整设计流程
+                谷仓鲜度轨 Demo
                 <ArrowRight aria-hidden="true" size={16} strokeWidth={1.8} />
               </Link>
               <Link className="landing-button landing-button--outline" to="/projects/new">开始创建</Link>
