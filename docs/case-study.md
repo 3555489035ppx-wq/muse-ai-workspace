@@ -14,7 +14,7 @@ Help designers move from brief understanding to research, insight, direction com
 
 ## 4. My Responsibilities
 
-Product framing, user-flow design, AI interaction model, information architecture, UI direction, demo content, frontend implementation, persistence boundary, and portfolio packaging.
+Product framing, user-flow design, AI interaction model, information architecture, UI direction, demo content, frontend implementation, persistence boundary, and project documentation.
 
 ## 5. Product Flow
 
@@ -34,7 +34,7 @@ Human review: confirm, edit, exclude, lock, retry, or return upstream.
 
 ## 7. Design Decisions
 
-The product uses a workspace instead of a chatbot, makes evidence visible before visual output, and features one complete case so a reviewer can understand the core loop quickly.
+The product uses a workspace instead of a chatbot, makes evidence visible before visual output, and features one complete case so a reader can understand the core loop quickly.
 
 ## 8. Demo Result
 
