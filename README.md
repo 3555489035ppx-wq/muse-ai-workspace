@@ -6,7 +6,7 @@ Muse helps designers turn an ambiguous brief into a traceable chain of research,
 
 [Live Demo](https://muse-ai-workspace.vercel.app/) · [GitHub](https://github.com/3555489035ppx-wq/muse-ai-workspace)
 
-![Muse AI Workspace — 谷仓鲜度轨](public/assets/project-covers/granary-fresh-rail-hero-v2.png)
+![Muse AI Workspace homepage](docs/screenshots/muse-homepage-hero.png)
 
 ## Live Demo
 
