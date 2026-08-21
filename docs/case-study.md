@@ -38,7 +38,7 @@ The product uses a workspace instead of a chatbot, makes evidence visible before
 
 ## 8. Demo Result
 
-The [Live Demo](https://muse-ai-workspace.vercel.app/) opens with the featured case **谷仓鲜度轨**. The recommended path reaches a decision map in about three minutes.
+The [Live Demo](https://muse-ai-workspace.vercel.app/projects/f1000000-0000-4000-8000-000000000104/workspace) opens directly with the real featured case **谷仓鲜度轨**. The recommended path reaches a decision map in about three minutes.
 
 ## 9. Future Plan
 

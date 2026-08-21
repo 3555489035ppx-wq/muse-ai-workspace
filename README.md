@@ -4,14 +4,15 @@
 
 Muse helps designers turn an ambiguous brief into a traceable chain of research, insights, directions, concepts, review, and version decisions. The product is designed around a workspace, not a one-off chatbot answer.
 
-[Live Demo](https://muse-ai-workspace.vercel.app/) · [GitHub](https://github.com/3555489035ppx-wq/muse-ai-workspace)
+[Live Demo](https://muse-ai-workspace.vercel.app/projects/f1000000-0000-4000-8000-000000000104/workspace) · [GitHub](https://github.com/3555489035ppx-wq/muse-ai-workspace)
 
 ![Muse AI Workspace — 谷仓鲜度轨](public/assets/project-covers/granary-fresh-rail-hero-v2.png)
 
 ## Live Demo
 
-- 本地演示：<http://localhost:5173/projects/f1000000-0000-4000-8000-000000000104/workspace>
-- 公开地址：[Vercel Demo](https://muse-ai-workspace.vercel.app/)
+- 面试官公开演示（直接进入真实项目）：[Vercel Demo](https://muse-ai-workspace.vercel.app/projects/f1000000-0000-4000-8000-000000000104/workspace)
+- 产品首页：[Muse 首页](https://muse-ai-workspace.vercel.app/)
+- 本地开发入口（仅本机，启动 `pnpm dev` 后可用）：<http://localhost:5175/projects/f1000000-0000-4000-8000-000000000104/workspace>
 
 ## Project Background
 
@@ -80,10 +81,10 @@ flowchart LR
 
 The recommended 3-minute path is:
 
-1. Open the [Live Demo](https://muse-ai-workspace.vercel.app/).
-2. Click **体验完整设计流程** or open the featured case **谷仓鲜度轨**.
-3. Read the project brief, then follow research evidence into design insights.
-4. Compare directions and open the selected concept, CMF, review, and version states.
+1. Open the [Live Demo](https://muse-ai-workspace.vercel.app/projects/f1000000-0000-4000-8000-000000000104/workspace).
+2. Start with the featured case **谷仓鲜度轨** and review the confirmed project brief.
+3. Follow research evidence into design insights, then compare directions.
+4. Open the selected concept, CMF, review, and version states.
 5. Finish at the decision map to see how evidence became a product choice.
 
 The live demo is a working MVP. It can be explored without an external API key; real text/image providers can be connected through the product's BYOK settings when a controlled AI run is needed.
