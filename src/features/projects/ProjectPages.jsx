@@ -35,6 +35,7 @@ import {
   TagList,
 } from "../../components/ui";
 import { stageLabel, templateCatalog } from "../../data/catalog";
+import { FEATURED_DEMO_PROJECT_ID } from "../../data/demoProjectRegistry";
 import { phaseOneTemplateCatalog } from "../../application/template/catalog";
 import { formatDate } from "../../lib/ids";
 import { useMuseStore } from "../../stores/useMuseStore";
@@ -199,9 +200,13 @@ export function ProjectsPage() {
   const [pendingDelete, setPendingDelete] = useState(null);
   const [busyProjectId, setBusyProjectId] = useState(null);
   const [operationError, setOperationError] = useState("");
+  const visibleProjects = useMemo(
+    () => projects.filter((project) => project.ownerScope === "user" || project.isDraft || project.id === FEATURED_DEMO_PROJECT_ID),
+    [projects],
+  );
   const filtered = useMemo(
-    () => filterProjects(projects, query, stage),
-    [projects, query, stage],
+    () => filterProjects(visibleProjects, query, stage),
+    [visibleProjects, query, stage],
   );
   const userProjects = useMemo(() => filtered.filter((project) => project.ownerScope === "user" || project.isDraft), [filtered]);
   const exampleProjects = useMemo(() => filtered.filter((project) => !(project.ownerScope === "user" || project.isDraft)), [filtered]);

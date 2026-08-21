@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArrowRight, ArrowUpRight, Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import { FEATURED_DEMO_PROJECT_ID } from "../../data/demoProjectRegistry";
 import "./landing.css";
 
 const navigation = [
@@ -170,13 +171,11 @@ function LandingPage() {
               Muse 帮助设计师从需求理解出发，整理研究、洞察和方向，让每一个设计决定都有上下文。
             </p>
             <div className="landing-hero__actions">
-              <Link className="landing-button landing-button--light" to="/projects/new">
-                开始创建
+              <Link className="landing-button landing-button--light" to={`/projects/${FEATURED_DEMO_PROJECT_ID}/workspace`}>
+                体验完整设计流程
                 <ArrowRight aria-hidden="true" size={16} strokeWidth={1.8} />
               </Link>
-              <a className="landing-button landing-button--outline" href="#workflow">
-                查看工作流
-              </a>
+              <Link className="landing-button landing-button--outline" to="/projects/new">开始创建</Link>
             </div>
           </div>
 
@@ -222,6 +221,32 @@ function LandingPage() {
 
         <WorkflowSection />
 
+        <section className="landing-section landing-featured-demo" id="demo" aria-labelledby="featured-demo-title">
+          <div className="landing-featured-demo__visual">
+            <img
+              src="/assets/portfolio/granary-fresh-rail-v2/granary-fresh-rail-v2-cover-01.png"
+              alt="谷仓鲜度轨模块化厨房收纳产品概念"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+          <div className="landing-featured-demo__copy">
+            <p className="landing-section__kicker">Featured demo · 完整案例</p>
+            <h2 id="featured-demo-title">谷仓鲜度轨</h2>
+            <p>从补货访谈、烹饪观察和清洁任务出发，体验一条完整的设计决策链：研究证据 → 洞察 → 方向比较 → 概念 → CMF → 评审。</p>
+            <div className="landing-featured-demo__meta" aria-label="谷仓鲜度轨案例信息">
+              <span>模块化厨房收纳</span>
+              <span>82% 决策进度</span>
+              <span>可追溯版本</span>
+            </div>
+            <Link className="landing-button landing-button--light" to={`/projects/${FEATURED_DEMO_PROJECT_ID}/workspace`}>
+              Start Demo
+              <ArrowUpRight aria-hidden="true" size={15} strokeWidth={1.8} />
+            </Link>
+            <p className="landing-featured-demo__note">其他起始案例仍保留在代码与回归测试中，但默认不打断这条主体验路径。</p>
+          </div>
+        </section>
+
         <section className="landing-section landing-philosophy" id="about" aria-labelledby="philosophy-title">
           <div className="landing-philosophy__statement">
             <p className="landing-section__kicker">人工参与决策</p>
@@ -247,40 +272,38 @@ function LandingPage() {
             <p className="landing-section__kicker">项目案例</p>
             <h2 id="example-title">从一条模糊需求，到一个可以讨论的方向。</h2>
             <p>
-              以“静境空气灯塔”为例。Muse 让项目从用户场景和设计问题开始，再把洞察推进到可以比较的产品方向。
+              以“谷仓鲜度轨”为例。Muse 让项目从用户场景和设计问题开始，再把洞察推进到可以比较、可以验证的产品方向。
             </p>
           </div>
 
           <div className="landing-example__grid">
             <figure>
               <picture>
-                <source srcSet="/portfolio/muse/screens/02-brief.webp" type="image/webp" />
                 <img
-                  src="/portfolio/muse/screens/02-brief.png"
-                  alt="静境空气灯塔项目的设计简报页面"
+                  src="/assets/portfolio/granary-fresh-rail-v2/granary-fresh-rail-v2-evidence-01.png"
+                  alt="谷仓鲜度轨项目的研究证据"
                   loading="lazy"
                   decoding="async"
                 />
-              </picture>
-              <figcaption>
-                <span>之前</span>
-                <strong>模糊需求被整理成一份可以确认的设计简报。</strong>
-              </figcaption>
+                </picture>
+                <figcaption>
+                <span>证据</span>
+                <strong>补货、取用和清洁任务被整理成可追溯的研究输入。</strong>
+                </figcaption>
             </figure>
             <figure>
               <picture>
-                <source srcSet="/portfolio/muse/screens/05-direction.webp" type="image/webp" />
                 <img
-                  src="/portfolio/muse/screens/05-direction.png"
-                  alt="静境空气灯塔项目的创意方向页面"
+                  src="/assets/portfolio/granary-fresh-rail-v2/granary-fresh-rail-v2-direction-01.png"
+                  alt="谷仓鲜度轨项目的创意方向页面"
                   loading="lazy"
                   decoding="async"
                 />
-              </picture>
-              <figcaption>
-                <span>之后</span>
-                <strong>洞察变成可比较的方向，并保留每个选择的理由。</strong>
-              </figcaption>
+                </picture>
+                <figcaption>
+                <span>决策</span>
+                <strong>洞察进入可比较的方向，并保留每个选择的理由。</strong>
+                </figcaption>
             </figure>
           </div>
         </section>

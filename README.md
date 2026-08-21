@@ -1,104 +1,122 @@
-# Muse AI
+# Muse AI Workspace
 
-[![Quality](https://github.com/3555489035ppx-wq/muse-ai-workspace/actions/workflows/quality.yml/badge.svg)](https://github.com/3555489035ppx-wq/muse-ai-workspace/actions/workflows/quality.yml)
+> AI Creative Decision Workspace for product designers.
 
-Muse 是一个面向产品设计师的 AI 创意决策工作台（AI-powered creative decision workspace）。它把模糊的早期需求推进成一条可以回看、比较和继续验证的设计链，而不是只生成一张孤立的效果图。
+Muse helps designers turn an ambiguous brief into a traceable chain of research, insights, directions, concepts, review, and version decisions. The product is designed around a workspace, not a one-off chatbot answer.
 
-> 这是一个可运行的 Muse MVP。默认不需要外部密钥即可浏览已保存案例、理解产品流程并运行离线状态；需要真实模型时，用户可以在设置页连接自己的 Provider（模型服务商）。
+[Live Demo](https://muse-ai-workspace.vercel.app) · [GitHub](https://github.com/3555489035ppx-wq/muse-ai-workspace)
 
-## 产品概览
+![Muse AI Workspace — 谷仓鲜度轨](public/assets/project-covers/granary-fresh-rail-hero-v2.png)
 
-Muse 面向产品设计学生、工业设计师和早期产品团队，解决早期创意工作中的三个断点：
+## Project Background
 
-- 需求停留在一段模糊描述，无法形成可确认的设计问题；
-- 研究、洞察、方向和概念之间缺少上下游关系；
-- 方案有了之后，团队难以解释为什么选择它、放弃了什么，以及下一步如何验证。
+In the early stage of product design, a brief, research notes, visual references, and AI outputs often live in different tools. The result is a large amount of exploration but very little decision continuity:
 
-核心工作链：
+- the original problem becomes difficult to recover;
+- research does not clearly influence the chosen direction;
+- AI output is hard to compare or explain later;
+- the reasoning behind a version disappears when the project moves forward.
+
+Muse was created to make the decision chain itself a first-class product surface.
+
+## User Problem
+
+**Target users**
+
+- Product design students
+- Industrial designers
+- Early-stage product teams
+
+**Core problems**
+
+1. Ambiguous requests are difficult to translate into a design problem.
+2. Research and concept exploration have no reliable bridge.
+3. Generated options lack criteria for comparison.
+4. Decisions, rejected directions, and next validation steps are easy to lose.
+
+## Product Goal
+
+Make AI a design decision assistant rather than an answer generator. Muse supports the chain:
 
 ```text
-需求理解 → 设计简报 → 研究证据 → 设计洞察 → 方向比较 → 概念探索 → 材料与色彩 → 设计评审 → 版本与决策地图
+Brief understanding → Research evidence → Design insight → Direction comparison → Concept exploration → Review and version decision
 ```
 
-Muse 的价值在于让 AI 的每一步输出都成为下一步判断的上下文，同时把人的确认、编辑、排除和锁定保留在流程里。
+The user keeps the authority to confirm, edit, reject, lock, retry, or return to an upstream step.
 
-## Featured demo：谷仓鲜度轨
+## My Design Decisions
 
-“谷仓鲜度轨”是本仓库用于演示的主案例：一个模块化厨房收纳产品。打开项目后，可以沿着完整工作链查看：
+### Why not use a chatbot as the main interface?
 
-1. 项目目标、用户和核心场景；
-2. 研究证据与设计洞察；
-3. 三个可比较的设计方向；
-4. 当前方向下的产品概念、CMF 和评审；
-5. 版本记录以及“证据 → 选择 → 方案”的决策关系。
+Design work is not a single question followed by a single answer. It accumulates context, compares alternatives, and revisits earlier assumptions. A chat-only surface hides those relationships, so Muse uses a workspace structure where the current stage, evidence, outputs, and next step remain visible together.
 
-同时保留三个并行演示项目：
+### Why make the decision chain visible?
 
-| 项目 | 产品类型 | 用途 |
-| --- | --- | --- |
-| 净安宝 | 便携式多功能消毒器 | 展示单手照护、移动工具与耐用设备的方向取舍 |
-| 静境空气灯塔 | 家居环境设备 | 展示状态反馈、长期维护与低干扰场景 |
-| 回收餐厨器 | 家庭循环设备 | 展示清洁边界、结构分区与循环使用路径 |
-| 谷仓鲜度轨 | 模块化厨房收纳 | Featured demo，展示完整决策闭环 |
+The value of AI is not only speed. For a portfolio project, the important question is whether a designer can explain why a direction was chosen. Every meaningful result therefore keeps its source, upstream relationship, confidence, limitation, and next validation step.
 
-四个项目共享同一套 `projectId` 隔离、证据关系和阶段约束；项目素材位于 [`public/assets`](public/assets) 与 [`public/portfolio`](public/portfolio)，注册表见 [`docs/demo-project-registry.md`](docs/demo-project-registry.md)。
+### Why feature one complete case?
 
-## AI 与人的关系
+The product contains several seeded cases for regression coverage, but the public experience now leads with one complete story: **谷仓鲜度轨**. This reduces choice overload and lets a reviewer understand the full workflow in under three minutes. The other seeded cases remain in code and tests; they are hidden from the default product path rather than deleted.
 
-Muse 不是把设计师替换成聊天框。每次 AI 参与都遵循以下边界：
+## AI Workflow
 
-- **Input（输入）**：项目名称、目标、目标用户、场景、交付物、约束和关键词；
-- **Context（上下文）**：已确认的 Brief、研究证据、洞察、选定方向和上游资产；
-- **Processing（处理）**：结构化输入、归纳证据、识别模式、提出差异化方向并检查上下游关系；
-- **Output（输出）**：可编辑的简报、洞察、方向、概念、CMF、评审意见和版本变更说明；
-- **Interaction（交互）**：设计师可以确认、编辑、排除、锁定、重试或回到上游修改；
-- **Persistence（保存）**：项目、来源、资产、运行状态和版本记录保存在浏览器数据库或受控服务端运行目录；
-- **Next step（下一步）**：每个结果都明确进入下一个阶段的条件，最终汇入版本记录和决策地图。
+```mermaid
+flowchart LR
+  A[Input<br/>需求 / 用户 / 目标 / 限制] --> B[Context<br/>Brief / 研究 / 素材 / 已确认选择]
+  B --> C[AI Processing<br/>整理 / 归纳 / 比较 / 生成候选]
+  C --> D[Human Review<br/>确认 / 编辑 / 排除 / 锁定]
+  D --> E[Output<br/>洞察 / 方向 / 概念 / 版本记录]
+  E --> F[Next Step<br/>进入下一阶段或回到上游验证]
+```
 
-图片生成只有在概念被用户确认后才会进入，生成资产会记录来源、模型和上游 Prompt 版本。没有连接真实 Provider 时，界面会保持离线状态，不把本地结果标成实时模型输出。
+**Human-in-the-loop（人在回路）** is part of the core flow. When a provider is unavailable, Muse keeps the offline demo state explicit; it does not label local demo assets as live model output.
 
-## 主要能力
+## Demo
 
-- 黑色编辑型工作台与响应式项目导航；
-- 从项目输入到 Brief、研究、洞察、方向、概念、CMF、评审和版本的连续流程；
-- 证据、洞察、方向、概念和版本之间的可追溯关系；
-- 设计方向比较、锁定和后续视觉探索；
-- 浏览器本地持久化、回收站、资产库和决策地图；
-- 设置页连接 Text AI 与 Image AI，支持用户自带 API Key（BYOK）；
-- 本地 Node BFF 与同源 Sites Worker 两种真实 AI 运行边界；
-- 针对数据隔离、Provider 连接、预算、图片校验和 Sites 构建的自动化测试。
+The recommended 3-minute path is:
 
-## 产品截图
+1. Open the [Live Demo](https://muse-ai-workspace.vercel.app).
+2. Click **体验完整设计流程** or open the featured case **谷仓鲜度轨**.
+3. Read the project brief, then follow research evidence into design insights.
+4. Compare directions and open the selected concept, CMF, review, and version states.
+5. Finish at the decision map to see how evidence became a product choice.
+
+The live demo is a working MVP. It can be explored without an external API key; real text/image providers can be connected through the product's BYOK settings when a controlled AI run is needed.
+
+## Product Screens
 
 ![Muse landing page](docs/screenshots/01-landing.png)
 
-![Muse project overview](docs/screenshots/02-projects.png)
-
-![Muse design brief](docs/screenshots/03-workspace.png)
-
-![Muse research evidence](docs/screenshots/04-research.png)
-
-![Muse direction comparison](docs/screenshots/05-directions.png)
-
 ![Muse decision map](docs/screenshots/08-decision-map.png)
 
-更多阶段截图见 [`docs/screenshots`](docs/screenshots)。
+The curated product screenshots are indexed in [`docs/screenshots`](docs/screenshots). Development captures and test artifacts are not used as the primary README visuals.
 
-## 技术栈
+## Technical Implementation
 
-- React 19 + React Router 7
-- Vite 6 + TypeScript 6
-- Dexie / IndexedDB：浏览器端项目与资产持久化
-- Zustand、Immer、Zod：状态、不可变更新与边界校验
-- Node.js BFF：Provider 适配、预算、幂等、密钥存储和资产校验
-- Sites Worker：线上同源 `/api` 与 BYOK 加密会话
-- pnpm：依赖安装与脚本执行
+- React 19, React Router 7, Vite, and TypeScript
+- Dexie / IndexedDB for local-first projects, assets, and versions
+- Zustand, Immer, and Zod for state and boundary validation
+- Node BFF and Sites Worker boundaries for provider calls, budgets, BYOK, and asset validation
+- Deterministic demo visual provider with project-level traceability
+- Unit, workflow, BFF, Worker, and industrial design regression tests
 
-架构说明见 [`docs/architecture.md`](docs/architecture.md)。
+## Portfolio Documents
 
-## 快速开始
+- [Case Study](docs/case-study.md)
+- [Product Story](docs/product-story.md)
+- [User Flow](docs/user-flow.md)
+- [Design Decisions](docs/design-decision.md)
+- [Demo Script](docs/demo-script.md)
+- [Architecture](docs/architecture.md)
+- [Real AI Setup](docs/REAL_AI_SETUP.md)
 
-要求：Node.js 22+ 与 pnpm 10+。
+## Current Boundary
+
+This repository is a runnable portfolio MVP, not a claim of production-scale collaboration. Identity, team workspaces, cross-device sync, billing, monitoring, and formal user research remain future work. The README keeps those boundaries visible so that AI capability is not overstated.
+
+## Local Development
+
+Requires Node.js 22+ and pnpm 10+.
 
 ```bash
 corepack enable
@@ -106,93 +124,16 @@ pnpm install
 pnpm dev
 ```
 
-然后打开 `http://localhost:5175`。`pnpm dev` 会同时启动 Vite 前端和本地 BFF；没有配置 Provider 时，仍可浏览四个项目和已保存流程。
-
-常用命令：
+Open `http://localhost:5175` after the local server starts. Common checks:
 
 ```bash
-pnpm typecheck   # TypeScript 项目检查
-pnpm lint        # ESLint
-pnpm test        # 全量单元与领域回归
-pnpm test:sites  # Worker / SPA fallback / BYOK 接口测试
-pnpm build       # 生产前端、Node 构建与 Sites 构建
-pnpm start       # 运行 dist/client + /api 的单进程入口
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm test:industrial
+pnpm build
 ```
 
-## 连接真实 AI
+## License and Asset Boundary
 
-### 方式一：用户在设置页输入自己的 Key
-
-进入 `设置 → AI 服务 / API`，分别配置 Text AI 与 Image AI，填写 Provider、Base URL、模型 ID 和 API Key，然后先测试连接，再保存。Key 不会写入 LocalStorage、项目 JSON、URL 或普通运行记录。
-
-### 方式二：服务端默认配置
-
-```bash
-Copy-Item .env.example .env
-```
-
-只在服务端 `.env` 中填写密钥：
-
-```env
-DEEPSEEK_API_KEY=
-OPENAI_API_KEY=
-MUSE_AI_LIVE_ENABLED=true
-MUSE_AI_KILL_SWITCH=false
-MUSE_AI_ALLOWED_PROJECT_IDS=
-```
-
-不要使用 `VITE_` 前缀保存供应商密钥，也不要把 `.env` 提交到 GitHub。线上 BYOK、加密会话和 Provider API 说明见 [`docs/REAL_AI_SETUP.md`](docs/REAL_AI_SETUP.md)。
-
-### 线上边界
-
-纯静态托管只能展示前端和已保存案例，不能安全地代理真实 AI。要支持上线后用户输入 Key，需要部署本仓库的 Worker，或把 `server/` BFF 迁移为受控的 Node/Vercel Functions，并配置密钥加密、鉴权、限流、预算与运行数据持久化。
-
-## 当前状态与限制
-
-当前版本是可运行 MVP：四个演示项目、端到端工作链、真实 AI BFF、线上 BYOK Worker、自动化回归和部署构建均已纳入仓库。
-
-仍需在正式商业化前补齐：
-
-- 用户身份、团队空间与跨设备同步；
-- 线上密钥的账户级托管、轮换和审计；
-- 更完整的限流、计费、监控和告警；
-- 真实用户研究与模型质量评估数据；
-- 面向 Vercel 的 `/api` Functions 适配。
-
-这些限制是产品边界，不会在没有配套基础设施时写成已经解决。
-
-## 后续 Vercel 部署
-
-推荐先把本仓库作为 GitHub 源码入口，再根据部署目标选择：
-
-1. **静态演示**：Vercel 使用 `pnpm build` 构建前端，关闭真实生成，仅展示产品与已保存案例；
-2. **真实 AI 演示**：保留当前前端和数据模型，将 `server/` 的 `/api` 端点迁移为 Vercel Functions，配置加密密钥、鉴权、限流、预算和 Provider 环境变量；
-3. **受控原型环境**：继续使用同源 Worker 或 Node BFF，让用户在设置页输入自己的 Key，并限制项目范围与费用上限。
-
-仓库暂不添加未经验证的 Vercel 配置，以免把部署能力写成未经过运行验证的承诺。
-
-## 项目结构
-
-```text
-src/
-  features/                 页面与交互
-  data/                     四个项目与工作流种子
-  db/                       IndexedDB、迁移与种子逻辑
-  lib/ai/                   AI 输入、Prompt 与 Provider 客户端
-  infrastructure/providers/ 本地确定性适配器与远程 BFF 适配器
-server/                     Node BFF、预算、密钥和资产策略
-worker/                     Sites Worker 与线上同源 API
-public/                     产品素材、项目视觉与流程截图
-tests/                      领域、BFF、Worker、工业设计流程回归
-docs/                       架构、AI 接入、案例注册表和截图
-```
-
-## 项目演示建议
-
-推荐演示顺序：先说明“早期创意为什么难以决策”，再打开“谷仓鲜度轨”展示证据如何进入方向比较，最后回到决策地图说明 Muse 如何保留人的判断。需要展示真实模型时，再在设置页连接自己的 Provider，并明确当前模型、费用与失败状态。
-
-## 作者与许可
-
-作者：Ppx15 · Muse AI 产品设计项目。
-
-本仓库当前未附带 MIT 或其他开源许可证。代码、字体、图片和第三方依赖的使用边界请先阅读 [`OPEN_SOURCE_NOTICES.md`](OPEN_SOURCE_NOTICES.md) 与 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)；如需公开复用，请先取得相应授权。
+This repository does not currently declare an open-source license. Before reusing the code, read [`OPEN_SOURCE_NOTICES.md`](OPEN_SOURCE_NOTICES.md) and [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md), and confirm the rights for fonts, images, and dependencies.

@@ -1,5 +1,7 @@
 import { DEMO_PROJECT_IDS, isDemoPortfolioProject } from "./demoVisuals.js";
 
+export const FEATURED_DEMO_PROJECT_ID = "f1000000-0000-4000-8000-000000000104";
+
 export const DEMO_PROJECT_REGISTRY = Object.freeze([
   {
     id: "f1000000-0000-4000-8000-000000000001",
@@ -37,6 +39,10 @@ export const DEMO_PROJECT_REGISTRY = Object.freeze([
 
 export function getDemoProjectRegistryEntry(projectId) {
   return DEMO_PROJECT_REGISTRY.find((item) => item.id === projectId) ?? null;
+}
+
+export function isFeaturedDemoProject(project) {
+  return project?.id === FEATURED_DEMO_PROJECT_ID;
 }
 
 export { DEMO_PROJECT_IDS, isDemoPortfolioProject };

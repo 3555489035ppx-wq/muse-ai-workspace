@@ -1,15 +1,19 @@
 # Muse V4.2 Demo Project Registry
 
-V4.2 的四个工业设计项目是可运行的作品集 Demo，不是随机项目列表。项目、内容、素材和后续工作流必须在同一个 projectId 下闭环；任何没有注册的项目都不能进入 V4.2 Demo Portfolio。
+V4.2 的工业设计项目是可运行的作品集 Demo，不是随机项目列表。项目、内容、素材和后续工作流必须在同一个 projectId 下闭环；任何没有注册的项目都不能进入 V4.2 Demo Portfolio。
+
+## Public entry strategy
+
+The default product path features **谷仓鲜度轨** as the single complete case. The other seeded projects remain registered for regression coverage and can be re-enabled for internal testing, but they are hidden from the public project list so a reviewer can understand one complete workflow without choice overload.
 
 ## Approved projects
 
 | projectId | 项目 | 产品类型 | 素材根路径 | 种子来源 |
 | --- | --- | --- | --- | --- |
-| `f1000000-0000-4000-8000-000000000001` | 净安宝 | 便携式多功能消毒器 | `/assets/jinganbao/v2` | `src/data/jinganbao.js` |
-| `f1000000-0000-4000-8000-000000000101` | 静境空气灯塔 | 家居环境设备 | `/assets/portfolio/quiet-air-lighthouse-v2` | `src/data/industrialPortfolioContent.js` |
-| `f1000000-0000-4000-8000-000000000103` | 回收餐厨器 | 家庭循环设备 | `/assets/portfolio/kitchen-loop-reclaimer-v2` | `src/data/industrialPortfolioContent.js` |
-| `f1000000-0000-4000-8000-000000000104` | 谷仓鲜度轨 | 模块化厨房收纳 | `/assets/portfolio/granary-fresh-rail-v2` | `src/data/industrialPortfolioContent.js` |
+| `f1000000-0000-4000-8000-000000000104` | 谷仓鲜度轨 | 模块化厨房收纳 | `/assets/portfolio/granary-fresh-rail-v2` | `src/data/industrialPortfolioContent.js` | Featured demo |
+| `f1000000-0000-4000-8000-000000000001` | 净安宝 | 便携式多功能消毒器 | `/assets/jinganbao/v2` | `src/data/jinganbao.js` | Hidden supporting seed |
+| `f1000000-0000-4000-8000-000000000101` | 静境空气灯塔 | 家居环境设备 | `/assets/portfolio/quiet-air-lighthouse-v2` | `src/data/industrialPortfolioContent.js` | Hidden supporting seed |
+| `f1000000-0000-4000-8000-000000000103` | 回收餐厨器 | 家庭循环设备 | `/assets/portfolio/kitchen-loop-reclaimer-v2` | `src/data/industrialPortfolioContent.js` | Hidden supporting seed |
 
 `f1000000-0000-4000-8000-000000000102`（行旅净水舱）是 retired 项目，不属于 V4.2 四项目 Demo 集合，也不能作为列表、工作区或视觉素材的回退项。
 
