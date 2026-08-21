@@ -4,9 +4,14 @@
 
 Muse helps designers turn an ambiguous brief into a traceable chain of research, insights, directions, concepts, review, and version decisions. The product is designed around a workspace, not a one-off chatbot answer.
 
-[Live Demo](https://muse-ai-workspace.vercel.app) · [GitHub](https://github.com/3555489035ppx-wq/muse-ai-workspace)
+[Live Demo](https://muse-ai-workspace.vercel.app/) · [GitHub](https://github.com/3555489035ppx-wq/muse-ai-workspace)
 
 ![Muse AI Workspace — 谷仓鲜度轨](public/assets/project-covers/granary-fresh-rail-hero-v2.png)
+
+## Live Demo
+
+- 本地演示：<http://localhost:5173/projects/f1000000-0000-4000-8000-000000000104/workspace>
+- 公开地址：[Vercel Demo](https://muse-ai-workspace.vercel.app/)
 
 ## Project Background
 
@@ -75,7 +80,7 @@ flowchart LR
 
 The recommended 3-minute path is:
 
-1. Open the [Live Demo](https://muse-ai-workspace.vercel.app).
+1. Open the [Live Demo](https://muse-ai-workspace.vercel.app/).
 2. Click **体验完整设计流程** or open the featured case **谷仓鲜度轨**.
 3. Read the project brief, then follow research evidence into design insights.
 4. Compare directions and open the selected concept, CMF, review, and version states.
