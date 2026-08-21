@@ -23,7 +23,9 @@
   },
   "include": [
     "src",
+    "api/**/*.ts",
     "server",
+    "worker/index.js",
     "scripts/**/*.ts",
     "tests/**/*.ts",
     "tests/**/*.tsx"

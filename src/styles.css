@@ -446,6 +446,8 @@ body[data-density="compact"] .app-shell__content { padding: 14px; } body[data-de
 .provider-meta dt { color: var(--muse-text-tertiary, #87938c); font-size: 13px; }
 .provider-meta dd { margin: 0; color: var(--muse-text-primary, #e7ece9); font-size: 14px; overflow-wrap: anywhere; }
 .provider-inline-error { display: flex; align-items: flex-start; gap: 9px; padding: 11px 12px; border: 1px solid rgba(214, 138, 130, .35); background: rgba(109, 49, 43, .15); color: #e2aaa4; font-size: 14px; line-height: 1.5; }
+.provider-inline-error--with-action { align-items: center; flex-wrap: wrap; }
+.provider-inline-error--with-action span { flex: 1 1 260px; }
 .provider-inline-loading { display: flex; align-items: center; gap: 9px; min-height: 72px; padding: 18px; border: 1px solid rgba(145, 178, 188, .18); background: rgba(19, 31, 35, .55); color: #b8c9cc; font-size: 14px; }
 .provider-inline-error--standalone { align-items: center; flex-wrap: wrap; }
 .provider-inline-error--standalone span { flex: 1 1 240px; }

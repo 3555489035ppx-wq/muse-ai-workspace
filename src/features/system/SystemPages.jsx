@@ -67,6 +67,42 @@ function providerDraft(view) {
   };
 }
 
+function fallbackProviderView(category) {
+  if (category === "text") {
+    return {
+      id: "text-provider",
+      category,
+      provider: "deepseek",
+      displayName: "DeepSeek Text AI",
+      baseUrl: "https://api.deepseek.com",
+      modelId: "deepseek-v4-pro",
+      model: "deepseek-v4-pro",
+      enabled: false,
+      connectionStatus: "unconfigured",
+      secretConfigured: false,
+      capabilities: ["textGeneration", "structuredOutput", "reasoning"],
+    };
+  }
+  return {
+    id: "image-provider",
+    category,
+    provider: "demo-visual",
+    displayName: "Demo Visual",
+    baseUrl: "",
+    modelId: "demo-visual",
+    model: "demo-visual",
+    enabled: true,
+    connectionStatus: "connected",
+    secretConfigured: false,
+    capabilities: ["demoImageSelection", "demoVariationLookup"],
+  };
+}
+
+function providerLoadErrorMessage(error) {
+  const detail = (error?.message || "AI 服务暂时无法连接").replace(/[。！？!?\s]+$/, "");
+  return `${detail}。你仍可以先填写 Provider、Base URL 和 API Key；服务恢复后点击测试或保存。`;
+}
+
 function providerStatusLabel(view) {
   if (!view || view.connectionStatus === "unconfigured") return "未配置";
   if (view.connectionStatus === "saved") return "已保存 · 待验证";
@@ -99,7 +135,10 @@ export function SettingsPage() {
   const [providerLoadState, setProviderLoadState] = useState("initial");
   const [providerTests, setProviderTests] = useState({ text: { status: "idle" }, image: { status: "idle" } });
   const [providerData, setProviderData] = useState(null);
-  const [providerDrafts, setProviderDrafts] = useState({ text: null, image: null });
+  const [providerDrafts, setProviderDrafts] = useState(() => ({
+    text: providerDraft(fallbackProviderView("text")),
+    image: providerDraft(fallbackProviderView("image")),
+  }));
   const [providerCategory, setProviderCategory] = useState("text");
   const [providerAdvanced, setProviderAdvanced] = useState(false);
   const [providerKeyModal, setProviderKeyModal] = useState(null);
@@ -119,7 +158,7 @@ export function SettingsPage() {
       controller.abort();
       setProviderLoading(false);
       setProviderLoadState("error");
-      setCloudError((current) => current || "AI 服务暂时无法连接，你的项目数据没有丢失。请重新连接。");
+      setCloudError((current) => current || providerLoadErrorMessage());
     }, 5000);
     setProviderLoading(true);
     setProviderLoadState("checking_service");
@@ -135,7 +174,7 @@ export function SettingsPage() {
     }).catch((error) => {
       if (error?.name === "AbortError") return;
       setProviderLoadState("error");
-      setCloudError(error?.message || "AI 服务暂时无法连接，你的项目数据没有丢失。请重新连接。");
+      setCloudError(providerLoadErrorMessage(error));
     }).finally(() => {
       window.clearTimeout(timeoutId);
       setProviderLoading(false);
@@ -182,6 +221,17 @@ export function SettingsPage() {
     setCloudError("");
     setProviderLoadState("ready");
   };
+  const reconnectProvider = async () => {
+    setProviderLoading(true);
+    try {
+      await reloadProviderState();
+    } catch (error) {
+      setProviderLoadState("error");
+      setCloudError(providerLoadErrorMessage(error));
+    } finally {
+      setProviderLoading(false);
+    }
+  };
   const updateProviderDraft = (key, value) => {
     setProviderDrafts((current) => {
       const nextDraft = { ...current[providerCategory], [key]: value };
@@ -225,8 +275,20 @@ export function SettingsPage() {
       pushToast(error?.message || "删除失败", "error");
     }
   };
-  const activeProvider = providerData?.providers?.[providerCategory];
   const activeDraft = providerDrafts[providerCategory];
+  const providerFromApi = providerData?.providers?.[providerCategory] ?? fallbackProviderView(providerCategory);
+  const providerChanged = Boolean(activeDraft && activeDraft.provider !== providerFromApi.provider);
+  const activeProvider = {
+    ...providerFromApi,
+    provider: activeDraft?.provider ?? providerFromApi.provider,
+    displayName: activeDraft?.displayName || providerFromApi.displayName,
+    baseUrl: activeDraft?.baseUrl ?? providerFromApi.baseUrl,
+    modelId: activeDraft?.modelId || providerFromApi.modelId,
+    model: activeDraft?.modelId || providerFromApi.model,
+    enabled: activeDraft?.enabled ?? providerFromApi.enabled,
+    connectionStatus: activeDraft?.apiKey ? "saved" : providerChanged ? "unconfigured" : providerFromApi.connectionStatus,
+    keyHint: activeDraft?.apiKey ? "已填写 · 待验证" : providerChanged ? undefined : providerFromApi.keyHint,
+  };
   const activeTest = providerTests[providerCategory];
   const openProviderKeyModal = () => {
     setProviderKeyValue("");
@@ -387,7 +449,7 @@ export function SettingsPage() {
                     </div>
                     <StatusPill status={cloudCapabilities?.mode === "real" ? "success" : cloudCapabilities?.mode === "partial" ? "ai" : "warn"}>{cloudCapabilities?.mode === "real" ? "REAL" : cloudCapabilities?.mode === "partial" ? "PARTIAL" : "未就绪"}</StatusPill>
                   </div>
-                  {cloudError ? <div className="provider-inline-error"><AlertCircle size={16}/>{cloudError}</div> : null}
+                  {cloudError ? <div className="provider-inline-error provider-inline-error--with-action"><AlertCircle size={16}/><span>{cloudError}</span><Button variant="quiet" icon={RefreshCw} loading={providerLoading} disabled={providerLoading} onClick={() => void reconnectProvider()}>重新连接</Button></div> : null}
                   <div className="provider-capability-summary">
                     {[
                       ["text", "Text AI", cloudCapabilities?.providers?.text, "项目理解、研究压缩、方向与评审"],
@@ -416,7 +478,7 @@ export function SettingsPage() {
                   {activeTest.status === "failed" ? <div className="provider-inline-error"><AlertCircle size={15}/><span>{activeTest.message}</span></div> : null}
                   {activeTest.status === "success" ? <div className="provider-test-result"><CheckCircle2 size={16}/><span>真实连接成功 · {activeTest.model} · {activeTest.latencyMs} ms</span></div> : null}
                   <div className="provider-config-actions"><Button variant="quiet" icon={RefreshCw} loading={activeTest.status === "testing"} disabled={activeTest.status === "testing"} onClick={() => void testCurrentProvider()}>{activeTest.status === "testing" ? "正在真实调用…" : "测试真实连接"}</Button><Button icon={Check} loading={activeTest.status === "saving"} onClick={() => void saveCurrentProvider()}>保存配置</Button>{activeProvider?.keyHint ? <Button variant="danger" onClick={() => setConfirmProviderDelete(providerCategory)}>删除配置</Button> : null}</div>
-                </Surface> : providerLoading ? <div className="provider-inline-loading" role="status"><RefreshCw size={16} className="is-spinning"/>正在连接 AI 服务…</div> : <div className="provider-inline-error provider-inline-error--standalone"><AlertCircle size={16}/><span>AI 服务暂时无法连接，你的项目数据没有丢失。</span><Button variant="quiet" icon={RefreshCw} onClick={() => { setProviderLoading(true); void reloadProviderState().catch((error) => { setProviderLoadState("error"); setCloudError(error?.message || "重新连接失败"); }).finally(() => setProviderLoading(false)); }}>重新连接</Button></div>}
+                </Surface> : providerLoading ? <div className="provider-inline-loading" role="status"><RefreshCw size={16} className="is-spinning"/>正在连接 AI 服务…</div> : <div className="provider-inline-error provider-inline-error--standalone"><AlertCircle size={16}/><span>AI 服务暂时无法连接，但配置表单仍可填写。保存或测试时会再次尝试连接。</span><Button variant="quiet" icon={RefreshCw} onClick={() => void reconnectProvider()}>重新连接</Button></div>}
                 <Surface title="密钥与运行边界" className="provider-security-note">
                   <div className="provider-security-grid"><div><strong>{providerData?.storage === "encrypted-session-cookie" ? "线上加密会话" : "Local Secret Store"}</strong><p>{providerData?.storage === "encrypted-session-cookie" ? "上线后，Key 会保存在当前浏览器的 HttpOnly 加密会话中，只能由 Muse 服务端读取；不会进入 LocalStorage、项目 JSON、URL 或运行记录。" : "本地开发时，Key 保存在服务端的 <code>.muse-runtime</code> 加密文件中；浏览器只收到掩码后缀，不会写入 LocalStorage、项目 JSON、URL 或运行记录。"}</p></div><div><strong>真实失败会保留失败状态</strong><p>测试会真实访问 Provider；认证失败、余额不足、限流、Base URL 错误都会显示可操作的错误状态，Muse 不会自动切换成实时结果。</p></div></div>
                 </Surface>

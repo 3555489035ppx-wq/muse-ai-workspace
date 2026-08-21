@@ -56,6 +56,20 @@ pnpm dev
 
 线上保存的是当前浏览器专属的 HttpOnly 加密会话 Cookie，服务端解密后才会向用户填写的 Provider 发起请求；完整 Key 不会返回到 React、导出 JSON、LocalStorage、URL 或运行记录。当前产品没有公共账号体系，因此这是“当前浏览器可恢复”的 BYOK（Bring Your Own Key，用户自带密钥），不是跨设备账号同步。若以后需要跨设备同步，应接入身份认证、D1 用户配置表和更严格的密钥保管服务，不能把 Key 明文放进数据库。
 
+### Vercel 部署
+
+Vercel 部署通过根目录的 `api/[...path].ts` 暴露同一组 `/api` 接口，并且 SPA 回退不会再拦截 `/api/*`。在 Vercel 项目的 **Settings → Environment Variables** 中配置：
+
+```env
+MUSE_SITE_SECRET=随机生成的长字符串
+MUSE_SITE_AI_ENABLED=true
+MUSE_SITE_KILL_SWITCH=false
+MUSE_SITE_REQUEST_BUDGET_CNY=1
+MUSE_SITE_PROJECT_DAILY_BUDGET_CNY=10
+```
+
+其中 `MUSE_SITE_SECRET` 只放在 Vercel 服务端环境变量中，不要写入仓库、前端环境变量或 README。未配置它时，页面仍会显示 Provider 和 API Key 表单，但保存会返回 `SITE_SECRET_NOT_CONFIGURED`，这是为了避免把用户密钥以明文保存。
+
 通用静态托管（例如 GitHub Pages）仍然不能承载这个 Worker API；只有部署了本仓库 Worker 的 Sites 或受控 Node BFF 才能支持线上真实连接。
 
 服务端接口：
