@@ -10,9 +10,7 @@ Muse helps designers turn an ambiguous brief into a traceable chain of research,
 
 ## Live Demo
 
-- 面试官公开演示（直接进入真实项目）：[Vercel Demo](https://muse-ai-workspace.vercel.app/projects/f1000000-0000-4000-8000-000000000104/workspace)
-- 产品首页：[Muse 首页](https://muse-ai-workspace.vercel.app/)
-- 本地开发入口（仅本机，启动 `pnpm dev` 后可用）：<http://localhost:5175/projects/f1000000-0000-4000-8000-000000000104/workspace>
+- 公开网址：<https://muse-ai-workspace.vercel.app/projects/f1000000-0000-4000-8000-000000000104/workspace>
 
 ## Project Background
 
@@ -58,11 +56,11 @@ Design work is not a single question followed by a single answer. It accumulates
 
 ### Why make the decision chain visible?
 
-The value of AI is not only speed. For a portfolio project, the important question is whether a designer can explain why a direction was chosen. Every meaningful result therefore keeps its source, upstream relationship, confidence, limitation, and next validation step.
+The value of AI is not only speed. For a product project, the important question is whether a designer can explain why a direction was chosen. Every meaningful result therefore keeps its source, upstream relationship, confidence, limitation, and next validation step.
 
 ### Why feature one complete case?
 
-The product contains several seeded cases for regression coverage, but the public experience now leads with one complete story: **谷仓鲜度轨**. This reduces choice overload and lets a reviewer understand the full workflow in under three minutes. The other seeded cases remain in code and tests; they are hidden from the default product path rather than deleted.
+The product contains several seeded cases for regression coverage, but the public experience now leads with one complete story: **谷仓鲜度轨**. This reduces choice overload and lets a visitor understand the full workflow in under three minutes. The other seeded cases remain in code and tests; they are hidden from the default product path rather than deleted.
 
 ## AI Workflow
 
@@ -106,7 +104,7 @@ The curated product screenshots are indexed in [`docs/screenshots`](docs/screens
 - Deterministic demo visual provider with project-level traceability
 - Unit, workflow, BFF, Worker, and industrial design regression tests
 
-## Portfolio Documents
+## Project Documents
 
 - [Case Study](docs/case-study.md)
 - [Product Story](docs/product-story.md)
@@ -118,7 +116,7 @@ The curated product screenshots are indexed in [`docs/screenshots`](docs/screens
 
 ## Current Boundary
 
-This repository is a runnable portfolio MVP, not a claim of production-scale collaboration. Identity, team workspaces, cross-device sync, billing, monitoring, and formal user research remain future work. The README keeps those boundaries visible so that AI capability is not overstated.
+This repository is a runnable product MVP, not a claim of production-scale collaboration. Identity, team workspaces, cross-device sync, billing, monitoring, and formal user research remain future work. The README keeps those boundaries visible so that AI capability is not overstated.
 
 ## Local Development
 
@@ -130,7 +128,7 @@ pnpm install
 pnpm dev
 ```
 
-Open `http://localhost:5175` after the local server starts. Common checks:
+After the local server starts, use the development URL printed by Vite. Common checks:
 
 ```bash
 pnpm typecheck
