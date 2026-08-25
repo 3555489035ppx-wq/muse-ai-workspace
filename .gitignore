@@ -21,3 +21,4 @@ Thumbs.db
 output/
 artifacts/
 design-qa*.png
+.vercel
