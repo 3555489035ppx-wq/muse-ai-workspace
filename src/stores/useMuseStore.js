@@ -698,7 +698,10 @@ export const useMuseStore = create((set, get) => ({
     if (Array.isArray(allowed.deliverables)) normalizedAllowed.expectedOutcomes = { explicit: allowed.deliverables.map((label, index) => ({ id: `${projectId}-overview-outcome-edited-${index + 1}`, label, category: 'Design Output', origin: 'explicit', sourceText: label })), suggested: current.projectOverview.expectedOutcomes?.suggested ?? [] };
     const projectOverview = validateProjectOverview({ ...current.projectOverview, ...normalizedAllowed });
     const editedFields = [...new Set([...(current.overviewUserEditedFields ?? []), ...Object.keys(normalizedAllowed)])];
-    const next = { ...current, projectOverview, overviewUserEditedFields: editedFields, projectUnderstandingSource: 'user', projectUnderstandingConfirmedAt: null, updatedAt: now() };
+    // A user may deliberately complete the project understanding after a live
+    // run failed. That is a valid human-authored branch, but an error state may
+    // never be silently confirmed as if it were a successful AI result.
+    const next = { ...current, projectOverview, overviewUserEditedFields: editedFields, projectUnderstandingStatus: 'success', projectUnderstandingError: null, projectUnderstandingSource: 'user', projectUnderstandingConfirmedAt: null, updatedAt: now() };
     await db.projects.put(next);
     set((state) => ({ projects: state.projects.map((item) => item.id === projectId ? next : item) }));
     return next;
@@ -707,11 +710,14 @@ export const useMuseStore = create((set, get) => ({
   confirmProjectUnderstanding: async (projectId) => {
     const current = get().projects.find((item) => item.id === projectId);
     if (!current?.projectOverview || !current.designBrief) throw new Error('PROJECT_UNDERSTANDING_NOT_READY');
+    if (current.projectUnderstandingStatus === 'error') throw new Error('PROJECT_UNDERSTANDING_FAILED');
+    if (current.projectUnderstandingStatus === 'running' || current.projectUnderstandingStatus === 'queued') throw new Error('PROJECT_UNDERSTANDING_NOT_READY');
+    if (current.projectUnderstandingSource !== 'live' && current.projectUnderstandingSource !== 'user') throw new Error('PROJECT_UNDERSTANDING_NOT_READY');
     const timestamp = now();
     const next = {
       ...current,
       projectUnderstandingConfirmedAt: timestamp,
-      projectUnderstandingStatus: current.projectUnderstandingStatus === 'error' ? 'success' : (current.projectUnderstandingStatus ?? 'success'),
+      projectUnderstandingStatus: current.projectUnderstandingStatus ?? 'success',
       projectUnderstandingError: null,
       creationReady: true,
       stage: 'brief',

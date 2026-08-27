@@ -139,6 +139,59 @@ test("forwards a saved user's key only to the upstream text provider", async () 
   assert.doesNotMatch(JSON.stringify(payload), /sk-proxy-secret/);
 });
 
+test("uses a site-managed text provider without a visitor API key", async () => {
+  const upstreamCalls = [];
+  const env = {
+    MUSE_SITE_AI_ENABLED: "true",
+    MUSE_SITE_KILL_SWITCH: "false",
+    MUSE_SITE_TEXT_PROVIDER: "deepseek",
+    MUSE_SITE_TEXT_DISPLAY_NAME: "Muse Text AI",
+    MUSE_SITE_TEXT_API_KEY: "site-owned-secret",
+    MUSE_SITE_TEXT_BASE_URL: "https://api.deepseek.com",
+    MUSE_SITE_TEXT_MODEL: "deepseek-v4-pro",
+    MUSE_UPSTREAM_FETCH: async (input, init) => {
+      upstreamCalls.push({ input: String(input), authorization: init.headers.authorization, body: JSON.parse(init.body) });
+      return new Response(JSON.stringify({
+        id: "site-text-request-1",
+        choices: [{ message: { content: '{"projectSummary":"真实模型建议"}' } }],
+        usage: { prompt_tokens: 9, completion_tokens: 4 },
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    },
+    ASSETS: { fetch: async () => new Response("missing", { status: 404 }) },
+  };
+
+  const capabilities = await worker.fetch(new Request("https://example.test/api/ai/capabilities"), env);
+  const capabilityPayload = await capabilities.json();
+  assert.equal(capabilities.status, 200);
+  assert.equal(capabilityPayload.data.providers.text.ready, true);
+  assert.equal(capabilityPayload.data.providers.text.managedBySite, true);
+  assert.doesNotMatch(JSON.stringify(capabilityPayload), /site-owned-secret/);
+
+  const response = await worker.fetch(new Request("https://example.test/api/ai/structured", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ purpose: "overview", instruction: "为模糊产品想法生成项目理解", schemaHint: { projectSummary: "string" } }),
+  }), env);
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.data.result.projectSummary, "真实模型建议");
+  assert.equal(upstreamCalls.length, 1);
+  assert.equal(upstreamCalls[0].authorization, "Bearer site-owned-secret");
+  assert.equal(upstreamCalls[0].body.model, "deepseek-v4-pro");
+  assert.doesNotMatch(JSON.stringify(payload), /site-owned-secret/);
+
+  const blockedEdit = await worker.fetch(new Request("https://example.test/api/ai/providers/text-provider", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ apiKey: "visitor-secret" }),
+  }), env);
+  const blockedPayload = await blockedEdit.json();
+  assert.equal(blockedEdit.status, 403);
+  assert.equal(blockedPayload.error.code, "SITE_PROVIDER_MANAGED");
+  assert.doesNotMatch(JSON.stringify(blockedPayload), /visitor-secret|site-owned-secret/);
+});
+
 test("emits the files required by Sites packaging", async () => {
   await access(new URL("../dist/client/index.html", import.meta.url));
   await access(new URL("../dist/server/index.js", import.meta.url));

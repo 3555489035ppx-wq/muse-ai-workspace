@@ -85,7 +85,7 @@ The recommended 3-minute path is:
 4. Open the selected concept, CMF, review, and version states.
 5. Finish at the decision map to see how evidence became a product choice.
 
-The live demo is a working MVP. It can be explored without an external API key; real text/image providers can be connected through the product's BYOK settings when a controlled AI run is needed.
+The live demo is a working MVP. When the deployment owner configures a server-side Text AI provider, visitors can generate real project understanding without entering an API key; BYOK remains an optional fallback when the deployment has no hosted provider.
 
 ## Product Screens
 
