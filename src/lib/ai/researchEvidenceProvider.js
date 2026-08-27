@@ -66,6 +66,7 @@ export const DAYTIDE_PUBLIC_EVIDENCE = [
 export const RESEARCH_SOURCE_TYPES = ["user_paste", "user_upload", "url", "document", "external_search"];
 export const RESEARCH_EVIDENCE_TYPES = ["verified", "candidate"];
 export const RESEARCH_EVIDENCE_STATUSES = ["unreviewed", "accepted", "rejected", "saved"];
+export const RESEARCH_ASSISTANT_STATUSES = ["idle", "processing", "success", "partial", "error"];
 
 const lensSets = {
   mixed_brand_spatial: [
@@ -203,6 +204,52 @@ export function getResearchQuestions(brief = {}, project = {}) {
   return [...explicit, ...fallback.map((label, index) => ({ id: `${project.id || "project"}-rq-inferred-${index + 1}`, label, origin: "inferred_from_brief" }))].slice(0, 5);
 }
 
+export function createResearchAssistant(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    status: "idle",
+    source: "none",
+    provider: null,
+    model: null,
+    runId: null,
+    generatedAt: null,
+    questionPlans: [],
+    gaps: [],
+    nextActions: [],
+    errorMessage: null,
+    note: "AI 只生成研究线索与执行计划，不代表已经找到或验证真实来源。",
+    ...overrides,
+  };
+}
+
+export function normalizeResearchAssistantResult(result = {}, questions = []) {
+  const questionById = new Map((questions ?? []).map((question) => [clean(question.id), question]));
+  const questionPlans = (Array.isArray(result.questionPlans) ? result.questionPlans : [])
+    .map((item) => {
+      const questionId = clean(item?.questionId);
+      const question = questionById.get(questionId);
+      const querySuggestions = unique(item?.querySuggestions).slice(0, 4);
+      const preferredSources = unique(item?.preferredSources).slice(0, 4);
+      if (!question || querySuggestions.length < 2 || preferredSources.length < 1) return null;
+      return {
+        id: `research-plan-${questionId}`,
+        questionId,
+        question: question.label,
+        whyThisMatters: clip(item.whyThisMatters, 420),
+        evidenceNeed: clip(item.evidenceNeed, 420),
+        querySuggestions,
+        preferredSources,
+      };
+    })
+    .filter(Boolean)
+    .filter((item, index, all) => all.findIndex((candidate) => candidate.questionId === item.questionId) === index);
+  return {
+    questionPlans,
+    gaps: unique(result.gaps).slice(0, 8),
+    nextActions: unique(result.nextActions).slice(0, 6),
+  };
+}
+
 function sourceIdentity(source = {}) {
   return source.sourceUrl || source.sourceFileId || source.id || "unknown-source";
 }
@@ -231,6 +278,7 @@ export function createResearchWorkspace({ project = {}, brief = {} } = {}) {
     sources: fixture.sources,
     evidence: fixture.evidence,
     hypotheses,
+    researchAssistant: createResearchAssistant(),
     evidenceLimited: false,
     plan: questions.map((question, index) => ({ id: `${question.id}-plan`, questionId: question.id, order: index + 1, status: "waiting", label: `围绕 ${question.label} 寻找可追溯来源` })),
     createdAt: new Date().toISOString(),
