@@ -14,11 +14,11 @@ import { isDemoPortfolioProject, ensureDemoVisuals } from '../data/demoVisuals';
 import { DemoVisualProvider } from '../services/visuals/demoVisualProvider';
 import { buildDeterministicReview, transitionIndustrialState } from '../domain/industrial/verticalSlice';
 import { createIndustrialDraftState, mergeIndustrialBrief, mergeIndustrialCmf, mergeIndustrialConcepts, mergeIndustrialDirections, normalizeIndustrialReview } from '../data/industrialDraft';
-import { briefInstruction, cmfInstruction, conceptInstruction, directionInstruction, industrialSchemaHints, insightInstruction, overviewInstruction, requestIndustrialImage, requestIndustrialImageEdit, requestIndustrialStructured, researchInstruction, researchPlanInstruction, reviewInstruction, validateIndustrialImage, versionInstruction, visualBriefInstruction } from '../lib/ai/industrialAi';
+import { briefInstruction, cmfInstruction, conceptInstruction, directionInstruction, industrialSchemaHints, insightInstruction, overviewInstruction, requestIndustrialImage, requestIndustrialImageEdit, requestIndustrialResearchSearch, requestIndustrialStructured, researchInstruction, researchPlanInstruction, reviewInstruction, validateIndustrialImage, versionInstruction, visualBriefInstruction } from '../lib/ai/industrialAi';
 import { hydrateIndustrialVisuals } from '../lib/ai/industrialVisuals';
 import { createOriginalBriefSnapshot, createProjectOverview, validateProjectOverview } from '../lib/ai/projectOverviewProvider';
 import { completeCoreTension, createDesignBrief, designBriefInstruction, validateDesignBrief } from '../lib/ai/designBriefProvider';
-import { acceptResearchEvidence as acceptResearchEvidenceModel, createCandidateEvidence, createResearchAssistant, createResearchSource as createResearchSourceRecord, createResearchWorkspace, evidenceAction, migrateResearchWorkspace, normalizeResearchAssistantResult, recomputeResearchWorkspace, updateResearchEvidence } from '../lib/ai/researchEvidenceProvider';
+import { acceptResearchEvidence as acceptResearchEvidenceModel, createCandidateEvidence, createResearchAssistant, createResearchSearchState, createResearchSource as createResearchSourceRecord, createResearchWorkspace, evidenceAction, migrateResearchWorkspace, normalizeResearchAssistantResult, normalizeResearchSearchResults, recomputeResearchWorkspace, updateResearchEvidence } from '../lib/ai/researchEvidenceProvider';
 import { generateDesignInsights, getAcceptedResearchEvidence, getDesignInsightContextSignature, qualityReviewDesignInsights } from '../lib/ai/designInsightProvider';
 import { generateDesignDirections, getDirectionRecommendation, normalizeDirectionResponse } from '../lib/ai/designDirectionProvider';
 import { ensureLocalAccount, LOCAL_ACCOUNT_PREFERENCE, updateLocalAccount } from '../lib/account/localAccount';
@@ -320,6 +320,57 @@ export const useMuseStore = create((set, get) => ({
     return { project: next, source, evidence: candidate };
   },
 
+  searchResearchSources: async (projectId, query, questionId, maxResults = 5) => {
+    let current = get().projects.find((item) => item.id === projectId);
+    if (!current?.industrial) throw new Error('INDUSTRIAL_PROJECT_NOT_FOUND');
+    current = await get().ensureResearchWorkspace(projectId);
+    const workspace = current.researchWorkspace;
+    if (!workspace) throw new Error('RESEARCH_WORKSPACE_NOT_FOUND');
+    const cleanQuery = String(query ?? '').trim();
+    const previousResults = workspace.researchSearch?.results ?? [];
+    const searchingWorkspace = { ...workspace, researchSearch: createResearchSearchState({ ...(workspace.researchSearch ?? {}), status: 'searching', query: cleanQuery, questionId: questionId || null, errorMessage: null, results: previousResults }) };
+    const running = { ...current, researchWorkspace: searchingWorkspace, updatedAt: now() };
+    await db.projects.put(running);
+    set((state) => ({ projects: state.projects.map((item) => item.id === projectId ? running : item), aiJob: { status: 'processing', message: '正在搜索真实来源；结果会先进入候选区，需你打开原文核对。' } }));
+    const response = await requestIndustrialResearchSearch({ project: current, query: cleanQuery, questionId, maxResults });
+    if (response?.source !== 'live' || !response.result) {
+      const errorMessage = `真实来源搜索失败：${localizeAiFailure(response, 'Web Search 暂时不可用；你仍可手动添加链接或上传材料。')}`;
+      const failedWorkspace = { ...workspace, researchSearch: createResearchSearchState({ ...(workspace.researchSearch ?? {}), status: 'error', query: cleanQuery, questionId: questionId || null, errorMessage, results: previousResults }) };
+      const failed = { ...current, researchWorkspace: failedWorkspace, updatedAt: now() };
+      await db.projects.put(failed);
+      set((state) => ({ projects: state.projects.map((item) => item.id === projectId ? failed : item), aiJob: { status: 'failed', errorCode: response?.errorCode, message: errorMessage } }));
+      return failed;
+    }
+    const trace = response.result.trace ?? {};
+    const results = normalizeResearchSearchResults(response.result.results, cleanQuery, trace.providerId);
+    const searchedAt = now();
+    const searchState = createResearchSearchState({ status: results.length ? 'success' : 'empty', query: cleanQuery, questionId: questionId || null, provider: trace.providerId || 'tavily-search', runId: response.result.runId, searchedAt, results, errorMessage: null });
+    const next = { ...current, researchWorkspace: recomputeResearchWorkspace({ ...workspace, researchSearch: searchState }), updatedAt: searchedAt };
+    await db.projects.put(next);
+    set((state) => ({ projects: state.projects.map((item) => item.id === projectId ? next : item), aiJob: { status: 'success', message: results.length ? `已找到 ${results.length} 条真实来源候选，请打开原文核对。` : '搜索完成，但暂时没有找到可安全导入的公开来源。' } }));
+    return next;
+  },
+
+  importResearchSearchResult: async (projectId, result, questionId) => {
+    const current = await get().ensureResearchWorkspace(projectId);
+    if (!current.researchWorkspace) throw new Error('RESEARCH_WORKSPACE_NOT_FOUND');
+    const url = String(result?.url ?? '').trim();
+    if (!url) return { ok: false, error: 'SEARCH_RESULT_URL_MISSING', project: current };
+    const existing = current.researchWorkspace.sources.find((item) => item.sourceUrl === url);
+    if (existing) {
+      get().pushToast('这个来源已经在候选区，不会重复导入', 'warning');
+      return { ok: false, error: 'SEARCH_RESULT_ALREADY_IMPORTED', project: current, source: existing };
+    }
+    const source = createResearchSourceRecord({ kind: 'external_search', name: result.title, sourceTitle: result.title, sourcePublisher: result.publisher, sourceDate: result.publishedAt, sourceUrl: url, originalExcerpt: result.rawContent || result.snippet, contentStatus: result.contentStatus, searchQuery: result.query || current.researchWorkspace.researchSearch?.query, searchProvider: result.provider || current.researchWorkspace.researchSearch?.provider, searchResultId: result.id, userProvidedSource: false, limitations: result.contentStatus === 'full' ? '搜索服务抓取了正文片段；请打开原文核对上下文、发布日期与适用范围。' : '当前只有搜索摘要；必须打开原文并补充原始摘录后才可采纳。' });
+    const candidate = createCandidateEvidence({ project: current, brief: current.designBrief, source, questionIds: questionId ? [questionId] : [] });
+    const workspace = recomputeResearchWorkspace({ ...current.researchWorkspace, sources: [source, ...(current.researchWorkspace.sources ?? [])], evidence: [candidate, ...(current.researchWorkspace.evidence ?? [])] });
+    const next = { ...current, researchWorkspace: workspace, updatedAt: now() };
+    await db.projects.put(next);
+    set((state) => ({ projects: state.projects.map((item) => item.id === projectId ? next : item) }));
+    get().pushToast('已导入候选来源；打开原文核对后再采纳');
+    return { ok: true, project: next, source, evidence: candidate };
+  },
+
   updateResearchEvidence: async (projectId, evidenceId, patch = {}) => {
     const current = get().projects.find((item) => item.id === projectId);
     if (!current?.researchWorkspace) throw new Error('RESEARCH_WORKSPACE_NOT_FOUND');
@@ -335,7 +386,7 @@ export const useMuseStore = create((set, get) => ({
     if (!current?.researchWorkspace) throw new Error('RESEARCH_WORKSPACE_NOT_FOUND');
     const result = acceptResearchEvidenceModel(current.researchWorkspace, evidenceId);
     if (!result.ok) {
-      get().pushToast('没有可追溯原文，暂时不能标记为已验证', 'warning');
+      get().pushToast(result.error === 'EVIDENCE_NEEDS_ORIGINAL_EXCERPT' ? '搜索摘要不能直接采纳，请打开原文并补充原始摘录' : '没有可追溯原文，暂时不能标记为已验证', 'warning');
       return { ok: false, error: result.error, project: current };
     }
     const next = persistProjectBrain({ ...current, researchWorkspace: result.workspace, updatedAt: now() });

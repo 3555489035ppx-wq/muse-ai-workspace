@@ -261,6 +261,11 @@ export interface ResearchSourceRecord {
   readonly sourceFileId?: string | null;
   readonly mimeType?: string | null;
   readonly originalExcerpt?: string;
+  /** Search results are either provider snippets or provider-fetched source text. */
+  readonly contentStatus?: "full" | "snippet";
+  readonly searchQuery?: string;
+  readonly searchProvider?: string;
+  readonly searchResultId?: string;
   readonly userProvidedSource?: boolean;
   readonly capturedAt: string;
   readonly thumbnailUrl?: string | null;
@@ -284,6 +289,10 @@ export interface ResearchEvidenceRecord {
   readonly sourceFileId?: string | null;
   readonly userProvidedSource?: boolean;
   readonly originalExcerpt: string;
+  readonly contentStatus?: "full" | "snippet";
+  readonly searchQuery?: string;
+  readonly searchProvider?: string;
+  readonly searchResultId?: string;
   readonly fact?: string;
   readonly interpretation: string;
   readonly designImplication: string;
@@ -329,6 +338,35 @@ export interface ResearchAssistantState {
   readonly note: string;
 }
 
+export interface ResearchSearchResult {
+  readonly id: string;
+  readonly title: string;
+  readonly url: string;
+  readonly publisher: string;
+  readonly publishedAt?: string | null;
+  readonly snippet: string;
+  readonly rawContent?: string;
+  readonly contentStatus: "full" | "snippet";
+  readonly score?: number;
+  readonly favicon?: string | null;
+  readonly query?: string;
+  readonly provider?: string;
+  readonly retrievedAt?: string;
+}
+
+export interface ResearchSearchState {
+  readonly schemaVersion: 1;
+  readonly status: "idle" | "searching" | "success" | "empty" | "error";
+  readonly query?: string | null;
+  readonly questionId?: string | null;
+  readonly provider?: string | null;
+  readonly runId?: string | null;
+  readonly searchedAt?: string | null;
+  readonly results: readonly ResearchSearchResult[];
+  readonly errorMessage?: string | null;
+  readonly note: string;
+}
+
 export interface ResearchWorkspace {
   readonly schemaVersion: 3;
   readonly projectId: string;
@@ -341,6 +379,7 @@ export interface ResearchWorkspace {
   readonly evidence: readonly ResearchEvidenceRecord[];
   readonly hypotheses: readonly ResearchHypothesisRecord[];
   readonly researchAssistant?: ResearchAssistantState;
+  readonly researchSearch?: ResearchSearchState;
   readonly plan?: readonly { id: string; questionId: string; order: number; status: string; label: string }[];
   readonly evidenceLimited: boolean;
   readonly researchSummary: string;

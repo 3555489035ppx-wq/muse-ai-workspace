@@ -45,6 +45,10 @@ function runtimeEnvironment(): Record<string, string> {
     MUSE_SITE_IMAGE_API_KEY: process.env.MUSE_SITE_IMAGE_API_KEY ?? "",
     MUSE_SITE_IMAGE_BASE_URL: process.env.MUSE_SITE_IMAGE_BASE_URL ?? "",
     MUSE_SITE_IMAGE_MODEL: process.env.MUSE_SITE_IMAGE_MODEL ?? "",
+    MUSE_SITE_SEARCH_PROVIDER: process.env.MUSE_SITE_SEARCH_PROVIDER ?? "tavily",
+    MUSE_SITE_SEARCH_API_KEY: process.env.MUSE_SITE_SEARCH_API_KEY ?? process.env.TAVILY_API_KEY ?? "",
+    MUSE_SITE_SEARCH_BASE_URL: process.env.MUSE_SITE_SEARCH_BASE_URL ?? "https://api.tavily.com",
+    MUSE_SITE_SEARCH_MAX_RESULTS: process.env.MUSE_SITE_SEARCH_MAX_RESULTS ?? "5",
   };
 }
 

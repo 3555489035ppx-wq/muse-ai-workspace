@@ -67,6 +67,60 @@ export const RESEARCH_SOURCE_TYPES = ["user_paste", "user_upload", "url", "docum
 export const RESEARCH_EVIDENCE_TYPES = ["verified", "candidate"];
 export const RESEARCH_EVIDENCE_STATUSES = ["unreviewed", "accepted", "rejected", "saved"];
 export const RESEARCH_ASSISTANT_STATUSES = ["idle", "processing", "success", "partial", "error"];
+export const RESEARCH_SEARCH_STATUSES = ["idle", "searching", "success", "empty", "error"];
+
+const SEARCH_NOTE = "搜索结果只会导入候选来源，不会自动成为已验证证据。请打开原文核对后再采纳。";
+
+function searchResultId(url, index = 0) {
+  const hash = [...String(url)].reduce((value, character) => ((value * 33) ^ character.charCodeAt(0)) >>> 0, 5381);
+  return `search-result-${hash.toString(36)}-${index + 1}`;
+}
+
+export function createResearchSearchState(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    status: "idle",
+    query: null,
+    questionId: null,
+    provider: null,
+    runId: null,
+    searchedAt: null,
+    results: [],
+    errorMessage: null,
+    note: SEARCH_NOTE,
+    ...overrides,
+  };
+}
+
+export function normalizeResearchSearchResults(results = [], query = "", provider = "") {
+  const seen = new Set();
+  return (Array.isArray(results) ? results : [])
+    .map((item, index) => {
+      const url = clean(item?.url);
+      if (!/^https:\/\//i.test(url) || seen.has(url)) return null;
+      seen.add(url);
+      const rawContent = clip(item?.rawContent, 8000);
+      const snippet = clip(item?.snippet || rawContent, 700);
+      if (!clean(item?.title) || !snippet) return null;
+      return {
+        id: clean(item?.id) || searchResultId(url, index),
+        title: clip(item.title, 240),
+        url,
+        publisher: clip(item.publisher || (() => { try { return new URL(url).hostname; } catch { return "公开网页"; } })(), 120),
+        publishedAt: clean(item?.publishedAt || item?.published_date) || null,
+        snippet,
+        rawContent: rawContent || undefined,
+        contentStatus: item?.contentStatus === "full" || rawContent ? "full" : "snippet",
+        score: Number.isFinite(Number(item?.score)) ? Number(item.score) : undefined,
+        favicon: clean(item?.favicon) || null,
+        query: clean(query) || undefined,
+        provider: clean(provider) || undefined,
+        retrievedAt: new Date().toISOString(),
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 8);
+}
 
 const lensSets = {
   mixed_brand_spatial: [
@@ -279,6 +333,7 @@ export function createResearchWorkspace({ project = {}, brief = {} } = {}) {
     evidence: fixture.evidence,
     hypotheses,
     researchAssistant: createResearchAssistant(),
+    researchSearch: createResearchSearchState(),
     evidenceLimited: false,
     plan: questions.map((question, index) => ({ id: `${question.id}-plan`, questionId: question.id, order: index + 1, status: "waiting", label: `围绕 ${question.label} 寻找可追溯来源` })),
     createdAt: new Date().toISOString(),
@@ -304,6 +359,7 @@ export function migrateResearchWorkspace(existing, { project = {}, brief = {} } 
     evidence: mergeById(base.evidence, Array.isArray(existing.evidence) ? existing.evidence.filter((item) => hasTraceableSource(item) && clean(item.originalExcerpt)).map((item) => ({ ...item, type: item.type === "verified" ? "verified" : "candidate" })) : []),
     hypotheses: Array.isArray(existing.hypotheses) && existing.hypotheses.length ? existing.hypotheses : base.hypotheses,
     plan: Array.isArray(existing.plan) ? existing.plan : base.plan,
+    researchSearch: createResearchSearchState(existing.researchSearch || {}),
   });
 }
 
@@ -324,10 +380,19 @@ export function createResearchSource(input = {}) {
     sourceFileId: clean(input.sourceFileId) || null,
     mimeType: clean(input.mimeType) || null,
     originalExcerpt: excerpt,
+    sourceTitle: clean(input.sourceTitle) || undefined,
+    sourcePublisher: clean(input.sourcePublisher) || undefined,
+    sourceDate: clean(input.sourceDate) || undefined,
+    contentStatus: input.contentStatus === "full" ? "full" : input.contentStatus === "snippet" ? "snippet" : undefined,
+    searchQuery: clean(input.searchQuery) || undefined,
+    searchProvider: clean(input.searchProvider) || undefined,
+    searchResultId: clean(input.searchResultId) || undefined,
     userProvidedSource: Boolean(input.userProvidedSource ?? (kind === "user_paste" || kind === "user_upload")),
     capturedAt: input.capturedAt || new Date().toISOString(),
     thumbnailUrl: input.thumbnailUrl || null,
-    limitations: kind === "url" && !excerpt ? "仅记录链接，尚未读取原始内容。" : "内容来自用户提供材料，事实范围以原始材料为准。",
+    limitations: clean(input.limitations) || (kind === "external_search"
+      ? (input.contentStatus === "full" ? "内容由搜索服务抓取，仍需打开原文核对上下文、发布日期与适用范围。" : "当前只保留搜索摘要，必须打开原文并补充原始摘录后才可采纳。")
+      : kind === "url" && !excerpt ? "仅记录链接，尚未读取原始内容。" : "内容来自用户提供材料，事实范围以原始材料为准。"),
   };
   return source;
 }
@@ -364,6 +429,10 @@ export function createCandidateEvidence({ project = {}, brief = {}, source, ques
     sourceDate: source.sourceDate || null,
     sourceUrl: source.sourceUrl,
     sourceFileId: source.sourceFileId,
+    contentStatus: source.contentStatus,
+    searchQuery: source.searchQuery,
+    searchProvider: source.searchProvider,
+    searchResultId: source.searchResultId,
     userProvidedSource: source.userProvidedSource,
     originalExcerpt: excerpt,
     fact: excerpt,
@@ -430,6 +499,7 @@ export function updateResearchEvidence(workspace, evidenceId, patch = {}) {
 export function acceptResearchEvidence(workspace, evidenceId) {
   const item = (workspace.evidence || []).find((evidence) => evidence.id === evidenceId);
   if (!item) return { ok: false, error: "EVIDENCE_NOT_FOUND" };
+  if (item.contentStatus === "snippet") return { ok: false, error: "EVIDENCE_NEEDS_ORIGINAL_EXCERPT" };
   if (!hasTraceableSource(item) || !clean(item.originalExcerpt)) return { ok: false, error: "EVIDENCE_NEEDS_SOURCE" };
   return { ok: true, workspace: updateResearchEvidence(workspace, evidenceId, { type: "verified", verificationStatus: "verified", userStatus: "accepted", confidence: "medium" }) };
 }

@@ -1,9 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
 import { SafeApiError } from "../api/envelope.js";
 import type { MuseServerConfig } from "../config.js";
-import type { ImageAiRequest, StructuredAiRequest } from "../contracts/ai.js";
+import type { ImageAiRequest, ResearchSearchRequest, StructuredAiRequest } from "../contracts/ai.js";
 import { assertLiveDispatchAllowed, authorizeProject, validateInstruction } from "../security/policy.js";
-import type { ImageProvider, ProviderSourceImage, StructuredProvider } from "../providers/types.js";
+import type { ImageProvider, ProviderSourceImage, SearchProvider, StructuredProvider } from "../providers/types.js";
 import type { ProviderRegistry } from "../providers/registry.js";
 import type { AiRunRepository} from "./AiRunRepository.js";
 import { type AiRunRecord } from "./AiRunRepository.js";
@@ -30,10 +30,11 @@ export class AiOrchestrator {
     await this.runs.create(run); return { run };
   }
   async structured(headers: Headers, input: StructuredAiRequest): Promise<unknown> {
+    if (input.enableSearch) throw new SafeApiError("TEXT_SEARCH_UNAVAILABLE", "联网检索已拆分为独立研究搜索，请使用研究搜索流程。", 422);
     const startedAt = Date.now();
-    const start = await this.#start(headers, input.projectId, input.idempotencyKey, input.enableSearch ? "search" : "structured", input.purpose, input, 0.15);
+    const start = await this.#start(headers, input.projectId, input.idempotencyKey, "structured", input.purpose, input, 0.15);
     if (start.replay?.status === "succeeded") return start.replay.safeResult;
-    const provider = this.registry.require(input.enableSearch ? "search" : "structured") as StructuredProvider;
+    const provider = this.registry.require("structured") as StructuredProvider;
     try {
       const result = await provider.complete({ instruction: validateInstruction(input.instruction), purpose: input.purpose, enableSearch: input.enableSearch, schemaHint: input.schemaHint });
       await this.budgets.record({ projectId: input.projectId, runId: start.run.id, amountCny: result.trace.usage.estimatedCostCny, recordedAt: new Date().toISOString() });
@@ -41,6 +42,23 @@ export class AiOrchestrator {
       await this.runs.update(start.run.id, { status: "succeeded", providerId: result.trace.providerId, model: result.trace.model, providerRequestId: result.trace.providerRequestId, costCny: result.trace.usage.estimatedCostCny, latencyMs: Date.now() - startedAt, safeResult });
       return safeResult;
     } catch (error) { await this.runs.update(start.run.id, { status: "failed", latencyMs: Date.now() - startedAt, safeErrorCode: error instanceof SafeApiError ? error.code : "PROVIDER_FAILURE" }); throw error; }
+  }
+
+  async search(headers: Headers, input: ResearchSearchRequest): Promise<unknown> {
+    const startedAt = Date.now();
+    const start = await this.#start(headers, input.projectId, input.idempotencyKey, "search", "research", input, 0.02);
+    if (start.replay?.status === "succeeded") return start.replay.safeResult;
+    const provider = this.registry.require("search") as SearchProvider;
+    try {
+      const result = await provider.search({ query: validateInstruction(input.query).slice(0, 300), maxResults: input.maxResults });
+      await this.budgets.record({ projectId: input.projectId, runId: start.run.id, amountCny: result.trace.usage.estimatedCostCny, recordedAt: new Date().toISOString() });
+      const safeResult = { runId: start.run.id, query: result.query, results: result.results, trace: result.trace };
+      await this.runs.update(start.run.id, { status: "succeeded", providerId: result.trace.providerId, model: result.trace.model, providerRequestId: result.trace.providerRequestId, costCny: result.trace.usage.estimatedCostCny, latencyMs: Date.now() - startedAt, safeResult });
+      return safeResult;
+    } catch (error) {
+      await this.runs.update(start.run.id, { status: "failed", latencyMs: Date.now() - startedAt, safeErrorCode: error instanceof SafeApiError ? error.code : "PROVIDER_FAILURE" });
+      throw error;
+    }
   }
   async image(headers: Headers, input: ImageAiRequest, operation: "image_generate" | "image_edit"): Promise<unknown> {
     const startedAt = Date.now();

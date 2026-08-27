@@ -10,6 +10,7 @@ import { ProviderConfigStore } from "../../server/application/ProviderConfigStor
 import { loadServerConfig } from "../../server/config.js";
 import { DeepSeekTextProvider } from "../../server/providers/deepseek/DeepSeekTextProvider.js";
 import { OpenAIImageProvider } from "../../server/providers/openai/OpenAIImageProvider.js";
+import { TavilySearchProvider } from "../../server/providers/search/TavilySearchProvider.js";
 import { MuseAiClient, MuseAiClientError } from "../../src/lib/api/museAiClient.js";
 
 const env = {
@@ -67,6 +68,50 @@ void test("V4 config separates text and image secrets and uses the current image
   const configured = loadServerConfig(env);
   assert.equal(configured.deepseekTextModel, "deepseek-v4-pro");
   assert.equal(configured.openaiImageModel, "gpt-image-2");
+});
+
+void test("Tavily search adapter returns provenance without exposing its key", async () => {
+  let requestBody = "";
+  let authorization = "";
+  const fakeFetch = ((_url: URL | RequestInfo, init?: RequestInit) => {
+    requestBody = typeof init?.body === "string" ? init.body : "";
+    authorization = new Headers(init?.headers).get("authorization") ?? "";
+    return Promise.resolve(new Response(JSON.stringify({ request_id: "tv-1", usage: { credits: 1 }, results: [{ title: "报告", url: "https://example.com/report", content: "公开摘要", raw_content: "公开正文", published_date: "2026-08-01", score: 0.8 }] }), { status: 200 }));
+  }) as typeof fetch;
+  const provider = new TavilySearchProvider("tavily-test-secret", "https://api.tavily.com", fakeFetch);
+  const result = await provider.search({ query: "真实用户研究", maxResults: 5 });
+  assert.equal(result.results.length, 1);
+  const first = result.results[0];
+  assert.ok(first);
+  assert.equal(first.contentStatus, "full");
+  assert.equal(first.publisher, "example.com");
+  assert.equal(authorization, "Bearer tavily-test-secret");
+  assert.doesNotMatch(requestBody, /tavily-test-secret/);
+});
+
+void test("local BFF exposes the scoped research search route", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "muse-search-runtime-"));
+  const projectId = "e5a912f1-81e1-4595-8196-4069e39d3b4f";
+  const fakeFetch = ((_url: URL | RequestInfo, init?: RequestInit) => {
+    assert.equal(new Headers(init?.headers).get("authorization"), "Bearer local-search-secret");
+    return Promise.resolve(new Response(JSON.stringify({ request_id: "local-search-1", usage: { credits: 1 }, results: [{ title: "公开材料", url: "https://example.com/source", content: "摘要", raw_content: "原文片段" }] }), { status: 200 }));
+  }) as typeof fetch;
+  const server = createMuseAiServer({ NODE_ENV: "test", MUSE_RUNTIME_DIRECTORY: directory, MUSE_AI_LIVE_ENABLED: "true", MUSE_AI_KILL_SWITCH: "false", MUSE_SITE_SEARCH_API_KEY: "local-search-secret" }, fakeFetch);
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  try {
+    const response = await fetch(`http://127.0.0.1:${String(address.port)}/api/research/search`, { method: "POST", headers: { "content-type": "application/json", "x-muse-actor-id": "muse-local-experiment", "x-muse-project-id": projectId }, body: JSON.stringify({ projectId, idempotencyKey: "search-route-test-1", query: "真实用户研究", maxResults: 5 }) });
+    const payload = await response.json() as { readonly ok?: boolean; readonly data?: { readonly results?: readonly unknown[] } };
+    assert.equal(response.status, 200);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.data?.results?.length, 1);
+  } finally {
+    server.close();
+    await once(server, "close");
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 void test("DeepSeek adapter requests JSON and does not serialize the API key", async () => {

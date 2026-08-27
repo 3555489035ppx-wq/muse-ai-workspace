@@ -1,8 +1,8 @@
 import { SafeApiError } from "../api/envelope.js";
 import type { AiOperation } from "../contracts/ai.js";
-import type { ImageProvider, ProviderDescriptor, StructuredProvider } from "./types.js";
+import type { ImageProvider, ProviderDescriptor, SearchProvider, StructuredProvider } from "./types.js";
 
-type RegisteredProvider = StructuredProvider | ImageProvider;
+type RegisteredProvider = StructuredProvider | ImageProvider | SearchProvider;
 export class ProviderRegistry {
   readonly #providers = new Map<string, RegisteredProvider>();
   register(provider: RegisteredProvider): void {

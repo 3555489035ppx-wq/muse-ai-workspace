@@ -124,6 +124,23 @@ export async function requestIndustrialStructured({ project, purpose, instructio
   }
 }
 
+export async function requestIndustrialResearchSearch({ project, query, questionId, maxResults = 5 }) {
+  try {
+    const capabilities = await client.capabilities();
+    if (!liveReady(capabilities, "search")) return { source: "unavailable", result: null, capabilities };
+    const result = await client.researchSearch({
+      projectId: project.id,
+      query,
+      questionId,
+      maxResults,
+      idempotencyKey: `industrial-search-${project.id}-${uuid()}`,
+    });
+    return { source: "live", result, capabilities };
+  } catch (error) {
+    return { source: error instanceof TypeError ? "unavailable" : "error", result: null, error };
+  }
+}
+
 export async function requestIndustrialImage({ project, prompt, negativePrompt = "重复产品、错误结构、漂浮部件、额外按钮、文字水印、畸变手指、卡通渲染" }) {
   try {
     const capabilities = await client.capabilities();

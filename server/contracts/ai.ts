@@ -25,6 +25,13 @@ export const structuredAiRequestSchema = aiProjectCommandSchema.extend({
 });
 export type StructuredAiRequest = z.infer<typeof structuredAiRequestSchema>;
 
+export const researchSearchRequestSchema = aiProjectCommandSchema.extend({
+  query: z.string().trim().min(2).max(300),
+  questionId: z.string().trim().min(1).max(160).optional(),
+  maxResults: z.coerce.number().int().min(1).max(8).default(5),
+});
+export type ResearchSearchRequest = z.infer<typeof researchSearchRequestSchema>;
+
 export const imageAiRequestSchema = aiProjectCommandSchema.extend({
   stage: z.enum(["concept", "cmf", "review"]).default("concept"),
   promptVersionId: z.uuid(),
@@ -77,6 +84,7 @@ export interface AiCapabilityView {
   readonly providers: {
     readonly text: AiProviderCapability;
     readonly image: AiProviderCapability;
+    readonly search?: AiProviderCapability;
   };
   readonly mode: "real" | "partial" | "unavailable";
 }
