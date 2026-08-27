@@ -11,6 +11,7 @@ const envSchema = z.object({
   DEEPSEEK_BASE_URL: z.url().default("https://api.deepseek.com"),
   DEEPSEEK_TEXT_MODEL: z.string().trim().default("deepseek-v4-pro"),
   DEEPSEEK_REASONING_EFFORT: z.enum(["high", "max"]).default("max"),
+  TAVILY_API_KEY: z.string().trim().optional(),
   OPENAI_API_KEY: z.string().trim().optional(),
   OPENAI_BASE_URL: z.url().default("https://api.openai.com/v1"),
   OPENAI_IMAGE_MODEL: z.string().trim().default("gpt-image-2"),
@@ -24,6 +25,10 @@ const envSchema = z.object({
   MUSE_AI_IMAGE_MODEL: z.string().trim().default("wan2.7-image-pro"),
   MUSE_RUNTIME_DIRECTORY: z.string().trim().min(1).default(".muse-runtime"),
   MUSE_SECRET_STORE_KEY: z.string().trim().optional(),
+  MUSE_SITE_SEARCH_PROVIDER: z.enum(["tavily"]).default("tavily"),
+  MUSE_SITE_SEARCH_API_KEY: z.string().trim().optional(),
+  MUSE_SITE_SEARCH_BASE_URL: z.url().default("https://api.tavily.com"),
+  MUSE_SITE_SEARCH_MAX_RESULTS: z.coerce.number().int().min(1).max(8).default(5),
 });
 
 export interface MuseServerConfig {
@@ -35,6 +40,10 @@ export interface MuseServerConfig {
   readonly deepseekBaseUrl: string;
   readonly deepseekTextModel: string;
   readonly deepseekReasoningEffort: "high" | "max";
+  readonly searchProvider: "tavily";
+  readonly searchApiKey?: string;
+  readonly searchBaseUrl: string;
+  readonly searchMaxResults: number;
   readonly openaiApiKey?: string;
   readonly openaiBaseUrl: string;
   readonly openaiImageModel: string;
@@ -78,6 +87,10 @@ export function loadServerConfig(env: NodeJS.ProcessEnv = process.env): MuseServ
     deepseekBaseUrl: value.DEEPSEEK_BASE_URL.replace(/\/$/, ""),
     deepseekTextModel: value.DEEPSEEK_TEXT_MODEL,
     deepseekReasoningEffort: value.DEEPSEEK_REASONING_EFFORT,
+    searchProvider: value.MUSE_SITE_SEARCH_PROVIDER,
+    searchApiKey: value.MUSE_SITE_SEARCH_API_KEY?.trim() ? value.MUSE_SITE_SEARCH_API_KEY : value.TAVILY_API_KEY?.trim() ? value.TAVILY_API_KEY : undefined,
+    searchBaseUrl: value.MUSE_SITE_SEARCH_BASE_URL.replace(/\/$/, ""),
+    searchMaxResults: value.MUSE_SITE_SEARCH_MAX_RESULTS,
     openaiApiKey: value.OPENAI_API_KEY === "" ? undefined : value.OPENAI_API_KEY,
     openaiBaseUrl: value.OPENAI_BASE_URL.replace(/\/$/, ""),
     openaiImageModel: value.OPENAI_IMAGE_MODEL,

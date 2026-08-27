@@ -9,12 +9,13 @@ import { AssetStore } from "./application/AssetStore.js";
 import { BudgetService } from "./application/BudgetService.js";
 import { ProviderConfigStore, type ProviderRuntimeConfig } from "./application/ProviderConfigStore.js";
 import { loadServerConfig } from "./config.js";
-import { imageAiRequestSchema, structuredAiRequestSchema } from "./contracts/ai.js";
+import { imageAiRequestSchema, researchSearchRequestSchema, structuredAiRequestSchema } from "./contracts/ai.js";
 import { providerCategorySchema, providerConfigInputSchema, providerCreateRequestSchema, providerPatchRequestSchema, providerTestRequestSchema, type ProviderCategory, type ProviderConfigInput, type ProviderName } from "./contracts/providers.js";
 import { DeepSeekTextAdapter } from "./providers/deepseek/DeepSeekTextProvider.js";
 import { DemoVisualProvider } from "./providers/demo/DemoVisualProvider.js";
 import { OpenAICompatibleTextProvider } from "./providers/openai/OpenAICompatibleTextProvider.js";
 import { OpenAIImageProvider } from "./providers/openai/OpenAIImageProvider.js";
+import { TavilySearchProvider } from "./providers/search/TavilySearchProvider.js";
 import { ProviderRegistry } from "./providers/registry.js";
 import type { ImageProvider, StructuredProvider } from "./providers/types.js";
 
@@ -78,6 +79,7 @@ export function createMuseAiHandler(environment: NodeJS.ProcessEnv = process.env
   const syncRegistry = () => {
     registry.replaceByCapability("structured", providerFor("text"));
     registry.replaceByCapability("image_generate", providerFor("image"));
+    registry.replaceByCapability("search", config.searchApiKey ? new TavilySearchProvider(config.searchApiKey, config.searchBaseUrl, fetcher) : undefined);
   };
   syncRegistry();
 
@@ -178,8 +180,21 @@ export function createMuseAiHandler(environment: NodeJS.ProcessEnv = process.env
     };
     const textView = view(textConfig, textSupported, "text");
     const imageView = view(imageConfig, imageSupported, "image");
+    const searchConfigured = Boolean(config.searchApiKey);
+    const searchView = {
+      id: "search-provider",
+      label: "Tavily Web Search",
+      model: "tavily-search",
+      configured: searchConfigured,
+      enabled: searchConfigured && serviceEnabled,
+      ready: searchConfigured && serviceEnabled,
+      mode: "real" as const,
+      managedBySite: searchConfigured,
+      capabilities: ["search"] as const,
+      configurationHint: searchConfigured ? undefined : "在部署环境变量中配置 MUSE_SITE_SEARCH_API_KEY",
+    };
     const readyCount = Number(textView.ready) + Number(imageView.ready);
-    return { liveEnabled: config.liveEnabled, providerConfigured: textView.configured || imageView.configured, killSwitchActive: config.killSwitchActive, providerLabel: readyCount === 2 ? `${textConfig.displayName} + ${imageConfig.displayName}` : readyCount === 1 ? "部分真实 AI" : "真实 AI 未配置", models: { llm: textConfig.modelId, image: imageConfig.modelId }, capabilities: registry.descriptors().filter((item) => item.configured).flatMap((item) => item.capabilities), limits: { requestCny: config.requestBudgetCny, projectDailyCny: config.projectDailyBudgetCny }, providers: { text: textView, image: imageView }, mode: readyCount === 2 ? "real" as const : readyCount === 1 ? "partial" as const : "unavailable" as const };
+    return { liveEnabled: config.liveEnabled, providerConfigured: textView.configured || imageView.configured || searchConfigured, killSwitchActive: config.killSwitchActive, providerLabel: readyCount === 2 ? `${textConfig.displayName} + ${imageConfig.displayName}` : readyCount === 1 ? "部分真实 AI" : searchConfigured ? "真实 Web Search 已配置" : "真实 AI 未配置", models: { llm: textConfig.modelId, image: imageConfig.modelId }, capabilities: registry.descriptors().filter((item) => item.configured).flatMap((item) => item.capabilities), limits: { requestCny: config.requestBudgetCny, projectDailyCny: config.projectDailyBudgetCny }, providers: { text: textView, image: imageView, search: searchView }, mode: readyCount === 2 ? "real" as const : readyCount === 1 || searchConfigured ? "partial" as const : "unavailable" as const };
   };
 
   return async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
@@ -265,6 +280,7 @@ export function createMuseAiHandler(environment: NodeJS.ProcessEnv = process.env
         if (request.headers["x-muse-actor-id"] !== config.actorId) throw new SafeApiError("UNAUTHORIZED", "当前身份无权查看 AI 运行记录。", 401);
         json(response, 200, success(id, await runs.recent(Number(url.searchParams.get("limit") ?? 50)))); return;
       }
+      if (request.method === "POST" && url.pathname === "/api/research/search") { json(response, 200, success(id, await orchestrator.search(headersOf(request), researchSearchRequestSchema.parse(await readJson(request))))); return; }
       if (request.method === "POST" && url.pathname === "/api/ai/structured") { json(response, 200, success(id, await orchestrator.structured(headersOf(request), structuredAiRequestSchema.parse(await readJson(request))))); return; }
       if (request.method === "POST" && ["/api/ai/images/generate", "/api/ai/images/edit"].includes(url.pathname)) {
         const input = imageAiRequestSchema.parse(await readJson(request));

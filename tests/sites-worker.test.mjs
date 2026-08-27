@@ -193,6 +193,63 @@ test("uses a site-managed text provider without a visitor API key", async () => 
   assert.doesNotMatch(JSON.stringify(blockedPayload), /visitor-secret|site-owned-secret/);
 });
 
+test("searches through a site-managed Tavily provider and normalizes safe sources", async () => {
+  const upstreamCalls = [];
+  const env = {
+    MUSE_SITE_AI_ENABLED: "true",
+    MUSE_SITE_KILL_SWITCH: "false",
+    MUSE_SITE_SEARCH_PROVIDER: "tavily",
+    MUSE_SITE_SEARCH_API_KEY: "site-search-secret",
+    MUSE_UPSTREAM_FETCH: async (input, init) => {
+      upstreamCalls.push({ input: String(input), authorization: init.headers.authorization, body: JSON.parse(init.body) });
+      return new Response(JSON.stringify({
+        request_id: "search-request-1",
+        usage: { credits: 1 },
+        results: [
+          { title: "公开研究报告", url: "https://research.example.org/report", content: "报告摘要与用户行为相关。", raw_content: "报告正文片段与上下文。", published_date: "2026-08-01", score: 0.91, favicon: "https://research.example.org/favicon.ico" },
+          { title: "本地地址不应导入", url: "https://127.0.0.1/private", content: "unsafe" },
+        ],
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    },
+    ASSETS: { fetch: async () => new Response("missing", { status: 404 }) },
+  };
+
+  const capabilities = await worker.fetch(new Request("https://example.test/api/ai/capabilities"), env);
+  const capabilityPayload = await capabilities.json();
+  assert.equal(capabilityPayload.data.providers.search.ready, true);
+  assert.equal(capabilityPayload.data.providers.search.managedBySite, true);
+  assert.doesNotMatch(JSON.stringify(capabilityPayload), /site-search-secret/);
+
+  const response = await worker.fetch(new Request("https://example.test/api/research/search", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ query: "用户如何完成核心任务", maxResults: 5 }),
+  }), env);
+  const payload = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.data.results.length, 1);
+  assert.equal(payload.data.results[0].contentStatus, "full");
+  assert.equal(payload.data.results[0].publisher, "research.example.org");
+  assert.equal(upstreamCalls.length, 1);
+  assert.equal(upstreamCalls[0].input, "https://api.tavily.com/search");
+  assert.equal(upstreamCalls[0].authorization, "Bearer site-search-secret");
+  assert.equal(upstreamCalls[0].body.include_answer, false);
+  assert.equal(upstreamCalls[0].body.include_raw_content, "markdown");
+  assert.doesNotMatch(JSON.stringify(payload), /site-search-secret/);
+});
+
+test("reports a clear configuration error when Web Search is not managed by the site", async () => {
+  const response = await worker.fetch(new Request("https://example.test/api/research/search", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ query: "公开研究来源" }),
+  }), { ASSETS: { fetch: async () => new Response("missing", { status: 404 }) } });
+  const payload = await response.json();
+  assert.equal(response.status, 503);
+  assert.equal(payload.error.code, "SEARCH_PROVIDER_NOT_CONFIGURED");
+});
+
 test("emits the files required by Sites packaging", async () => {
   await access(new URL("../dist/client/index.html", import.meta.url));
   await access(new URL("../dist/server/index.js", import.meta.url));

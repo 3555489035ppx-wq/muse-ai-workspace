@@ -138,6 +138,21 @@ function siteManagedConfig(env, category) {
   });
 }
 
+function siteManagedSearchConfig(env) {
+  const apiKey = String(env.MUSE_SITE_SEARCH_API_KEY ?? env.TAVILY_API_KEY ?? "").trim();
+  if (!apiKey) return undefined;
+  const provider = String(env.MUSE_SITE_SEARCH_PROVIDER ?? "tavily").trim().toLowerCase();
+  if (provider !== "tavily") throw new WorkerApiError("SITE_SEARCH_PROVIDER_INVALID", "站点托管的 Web Search Provider 配置无效。", 503);
+  const baseUrl = String(env.MUSE_SITE_SEARCH_BASE_URL ?? "https://api.tavily.com").trim().replace(/\/$/, "");
+  let parsed;
+  try { parsed = new URL(baseUrl); } catch { throw new WorkerApiError("SITE_SEARCH_BASE_URL_INVALID", "Web Search Base URL 格式无效。", 503); }
+  if (parsed.protocol !== "https:" || parsed.username || parsed.password || ["localhost", "127.0.0.1", "::1", "[::1]"].includes(parsed.hostname.toLowerCase())) {
+    throw new WorkerApiError("SITE_SEARCH_BASE_URL_INVALID", "Web Search Base URL 只允许 HTTPS 公网地址。", 503);
+  }
+  const requestedMax = Number(env.MUSE_SITE_SEARCH_MAX_RESULTS ?? 5);
+  return { provider, apiKey, baseUrl: parsed.toString().replace(/\/$/, ""), maxResults: Number.isInteger(requestedMax) ? Math.max(1, Math.min(8, requestedMax)) : 5 };
+}
+
 function supportedProvider(category, provider) {
   if (category === "text") return ["deepseek", "openai", "custom", "custom-openai-compatible"].includes(provider);
   return ["openai", "custom", "custom-openai-compatible", "demo-visual"].includes(provider);
@@ -273,17 +288,30 @@ function providerCapabilities(env, configs) {
   };
   const text = view("text", configs.text);
   const image = view("image", configs.image);
+  const searchConfig = siteManagedSearchConfig(env);
+  const search = {
+    id: "search-provider",
+    label: "Tavily Web Search",
+    model: "tavily-search",
+    configured: Boolean(searchConfig),
+    enabled: Boolean(searchConfig) && serviceEnabled,
+    ready: Boolean(searchConfig) && serviceEnabled,
+    mode: "real",
+    managedBySite: Boolean(searchConfig),
+    capabilities: ["search"],
+    configurationHint: searchConfig ? undefined : "站点尚未配置 Web Search；请由管理员添加 MUSE_SITE_SEARCH_API_KEY",
+  };
   const readyCount = Number(text.ready) + Number(image.ready);
   return {
     liveEnabled: serviceEnabled,
-    providerConfigured: text.configured || image.configured,
+    providerConfigured: text.configured || image.configured || search.configured,
     killSwitchActive: !serviceEnabled,
     providerLabel: readyCount === 2 ? `${configs.text.displayName} + ${configs.image.displayName}` : readyCount === 1 ? "部分真实 AI" : "真实 AI 未配置",
     models: { llm: configs.text.modelId, image: configs.image.modelId },
-    capabilities: [...(text.ready ? ["structured", "review"] : []), ...(image.ready ? ["image_generate", "image_edit"] : [])],
+    capabilities: [...(text.ready ? ["structured", "review"] : []), ...(image.ready ? ["image_generate", "image_edit"] : []), ...(search.ready ? ["search"] : [])],
     limits: { requestCny: Number(env.MUSE_SITE_REQUEST_BUDGET_CNY ?? 1), projectDailyCny: Number(env.MUSE_SITE_PROJECT_DAILY_BUDGET_CNY ?? 10) },
-    providers: { text, image },
-    mode: readyCount === 2 ? "real" : readyCount === 1 ? "partial" : "unavailable",
+    providers: { text, image, search },
+    mode: readyCount === 2 ? "real" : readyCount === 1 || search.ready ? "partial" : "unavailable",
   };
 }
 
@@ -381,6 +409,57 @@ async function callText(env, config, input) {
     rawContentLength: String(content).length,
     usage: { inputTokens, outputTokens, estimatedCostCny: (inputTokens * 2 + outputTokens * 8) / 1_000_000 },
   };
+}
+
+function searchResultId(url, index) {
+  let hash = 5381;
+  for (const character of url) hash = ((hash * 33) ^ character.charCodeAt(0)) >>> 0;
+  return `tavily-${hash.toString(36)}-${index + 1}`;
+}
+
+function publicSearchUrl(raw) {
+  let parsed;
+  try { parsed = new URL(String(raw ?? "").trim()); } catch { return undefined; }
+  const host = parsed.hostname.toLowerCase();
+  const parts = host.split(".").map(Number);
+  const privateIpv4 = parts.length === 4 && parts.every((part) => Number.isInteger(part) && part >= 0 && part <= 255)
+    && (parts[0] === 10 || parts[0] === 127 || parts[0] === 0 || (parts[0] === 169 && parts[1] === 254) || (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) || (parts[0] === 192 && parts[1] === 168));
+  if (parsed.protocol !== "https:" || host === "localhost" || host.endsWith(".local") || privateIpv4 || host.includes(":")) return undefined;
+  parsed.username = "";
+  parsed.password = "";
+  parsed.hash = "";
+  return parsed.toString();
+}
+
+function textClip(value, max) {
+  const text = String(value ?? "").replace(/\s+/g, " ").trim();
+  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
+}
+
+async function searchResearchSources(env, input) {
+  const config = siteManagedSearchConfig(env);
+  if (!config) throw new WorkerApiError("SEARCH_PROVIDER_NOT_CONFIGURED", "站点尚未配置 Web Search Provider；请在 Vercel 环境变量添加 MUSE_SITE_SEARCH_API_KEY。", 503);
+  const response = await upstreamFetch(env, `${config.baseUrl}/search`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${config.apiKey}`, "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({ query: input.query, search_depth: "basic", topic: "general", max_results: input.maxResults ?? config.maxResults, include_answer: false, include_raw_content: "markdown", include_images: false, include_favicon: true, include_usage: true }),
+  });
+  if (!response.ok) await providerFailure("Tavily Web Search", response);
+  const payload = await responseJson(response, "Tavily Web Search");
+  const seen = new Set();
+  const results = [];
+  for (const [index, item] of (Array.isArray(payload.results) ? payload.results : []).entries()) {
+    const url = publicSearchUrl(item?.url);
+    const title = textClip(item?.title, 240);
+    const rawContent = textClip(item?.raw_content, 8000);
+    const snippet = textClip(item?.content || rawContent, 700);
+    if (!url || !title || !snippet || seen.has(url)) continue;
+    seen.add(url);
+    results.push({ id: textClip(item?.id, 160) || searchResultId(url, index), title, url, publisher: new URL(url).hostname.replace(/^www\./i, "") || "公开网页", publishedAt: textClip(item?.published_date, 80) || null, snippet, rawContent: rawContent || undefined, contentStatus: rawContent ? "full" : "snippet", score: Number.isFinite(Number(item?.score)) ? Number(item.score) : undefined, favicon: publicSearchUrl(item?.favicon) || null });
+    if (results.length >= (input.maxResults ?? config.maxResults)) break;
+  }
+  const credits = Number(payload.usage?.credits ?? 1);
+  return { query: input.query, results, trace: { providerId: "tavily-search", model: "tavily-search", modelVersion: "tavily-search", providerRequestId: textClip(payload.request_id, 160) || undefined, httpStatus: response.status, rawContentLength: results.reduce((total, item) => total + (item.rawContent?.length ?? 0), 0), parsed: true, usage: { estimatedCostCny: Number.isFinite(credits) && credits > 0 ? credits * 0.01 : 0.01 } } };
 }
 
 function assertImageConfig(config) {
@@ -545,6 +624,16 @@ async function handleApi(request, env) {
     if (request.method === "GET" && url.pathname === "/api/ai/capabilities") {
       const state = await providerConfigs(env, request);
       return jsonResponse(success(providerCapabilities(env, state.configs), id));
+    }
+    if (request.method === "POST" && url.pathname === "/api/research/search") {
+      if (!liveEnabled(env)) throw new WorkerApiError("AI_DISABLED", "线上真实 AI 当前已关闭。", 503);
+      const input = await parseJson(request);
+      const query = String(input.query ?? "").trim();
+      if (query.length < 2 || query.length > 300) throw new WorkerApiError("INVALID_INPUT", "搜索问题需要 2—300 个字符。", 400);
+      const maxResults = Number(input.maxResults ?? 5);
+      if (!Number.isInteger(maxResults) || maxResults < 1 || maxResults > 8) throw new WorkerApiError("INVALID_INPUT", "搜索结果数量需要在 1—8 条之间。", 400);
+      const result = await searchResearchSources(env, { query, maxResults });
+      return jsonResponse(success({ runId: requestId(), ...result }, id));
     }
     if (request.method === "POST" && url.pathname === "/api/ai/structured") {
       if (!liveEnabled(env)) throw new WorkerApiError("AI_DISABLED", "线上真实 AI 当前已关闭。", 503);

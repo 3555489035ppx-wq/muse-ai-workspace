@@ -9,6 +9,7 @@ import {
   getResearchLenses,
   getResearchQuestions,
   normalizeResearchAssistantResult,
+  normalizeResearchSearchResults,
   recomputeResearchWorkspace,
   researchQualityReview,
 } from "../src/lib/ai/researchEvidenceProvider.js";
@@ -77,6 +78,18 @@ test("AI research assistant normalizes plans without creating evidence", () => {
   assert.equal(workspace.evidence.length, 0);
 });
 
+test("search results are deduplicated and stay separate from verified evidence", () => {
+  const results = normalizeResearchSearchResults([
+    { id: "one", title: "公开报告", url: "https://example.com/report", publisher: "Example", snippet: "摘要" },
+    { id: "duplicate", title: "重复结果", url: "https://example.com/report", publisher: "Example", snippet: "重复摘要" },
+    { title: "不安全地址", url: "http://example.com/private", snippet: "不应进入" },
+  ], "用户行为研究", "tavily-search");
+  assert.equal(results.length, 1);
+  assert.equal(results[0].contentStatus, "snippet");
+  const workspace = createResearchWorkspace({ project: { id: "other" }, brief: industrialBrief });
+  assert.equal(workspace.evidence.length, 0);
+});
+
 test("a URL without source excerpt cannot be verified", () => {
   const workspace = createResearchWorkspace({ project: { id: "daytide" }, brief: daytideBrief });
   const source = createResearchSource({ kind: "url", name: "外部链接", sourceUrl: "https://example.com/report" });
@@ -85,6 +98,16 @@ test("a URL without source excerpt cannot be verified", () => {
   const accepted = acceptResearchEvidence(next, evidence.id);
   assert.equal(accepted.ok, false);
   assert.equal(accepted.error, "EVIDENCE_NEEDS_SOURCE");
+});
+
+test("a search snippet cannot be accepted until the original excerpt is added", () => {
+  const workspace = createResearchWorkspace({ project: { id: "other" }, brief: industrialBrief });
+  const source = createResearchSource({ kind: "external_search", name: "搜索候选", sourceUrl: "https://example.com/report", originalExcerpt: "搜索摘要", contentStatus: "snippet", searchProvider: "tavily-search" });
+  const evidence = createCandidateEvidence({ project: { id: "other" }, brief: industrialBrief, source, questionIds: ["rq-1"] });
+  const next = recomputeResearchWorkspace({ ...workspace, sources: [source], evidence: [evidence] });
+  const accepted = acceptResearchEvidence(next, evidence.id);
+  assert.equal(accepted.ok, false);
+  assert.equal(accepted.error, "EVIDENCE_NEEDS_ORIGINAL_EXCERPT");
 });
 
 test("user provided excerpt can be accepted and enters summary", () => {

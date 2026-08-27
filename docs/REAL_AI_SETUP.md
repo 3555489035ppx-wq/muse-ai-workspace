@@ -6,9 +6,10 @@ Muse 的真实生成链路已经接入服务端 BFF（Backend-for-Frontend，前
 
 1. 用户在新建项目中输入项目名称、设计目标、目标用户和使用场景。
 2. Muse 先把输入整理成可确认的 Brief（设计简报）。
-3. 用户确认后，按当前项目上下文生成研究证据、设计洞察、三个差异化方向、产品概念和 CMF（材料、色彩与表面处理）。
-4. 用户必须先选择一个概念，再由已连接的 Text AI 生成 Visual Generation Brief，由已连接的 Image AI 生成四张互补产品图；选定一张后才能进入后续 CMF、评审、版本记录和封面。
-5. 用户确认评审建议后创建版本，版本保留图片、变更原因和上游项目上下文。
+3. 用户确认后，研究助手先生成研究计划；配置 Web Search 后可以从检索词搜索带 URL 的公开来源。搜索结果只进入候选区，用户打开原文、补充或核对摘录后，才能成为研究证据。
+4. 用户确认后，按当前项目上下文生成研究解读、设计洞察、三个差异化方向、产品概念和 CMF（材料、色彩与表面处理）。
+5. 用户必须先选择一个概念，再由已连接的 Text AI 生成 Visual Generation Brief，由已连接的 Image AI 生成四张互补产品图；选定一张后才能进入后续 CMF、评审、版本记录和封面。
+6. 用户确认评审建议后创建版本，版本保留图片、变更原因和上游项目上下文。
 
 真实 Text AI 关闭时，Muse 只保留用户输入与已经存在的结果，并明确显示离线状态，不会新生成本地替代内容；真实 Image AI 关闭时不生成图片，也不会把 SVG 或种子图片标记为外部模型结果。
 
@@ -33,6 +34,10 @@ MUSE_AI_KILL_SWITCH=false
 MUSE_AI_ALLOWED_PROJECT_IDS=允许使用真实 AI 的项目 UUID
 MUSE_AI_REQUEST_BUDGET_CNY=1
 MUSE_AI_PROJECT_DAILY_BUDGET_CNY=10
+MUSE_SITE_SEARCH_PROVIDER=tavily
+MUSE_SITE_SEARCH_API_KEY=你的 Tavily 服务端密钥
+MUSE_SITE_SEARCH_BASE_URL=https://api.tavily.com
+MUSE_SITE_SEARCH_MAX_RESULTS=5
 ```
 
 开发环境运行：
@@ -70,9 +75,15 @@ MUSE_SITE_TEXT_DISPLAY_NAME=Muse Text AI
 MUSE_SITE_TEXT_API_KEY=服务端 Provider 密钥
 MUSE_SITE_TEXT_BASE_URL=https://api.deepseek.com
 MUSE_SITE_TEXT_MODEL=deepseek-v4-pro
+MUSE_SITE_SEARCH_PROVIDER=tavily
+MUSE_SITE_SEARCH_API_KEY=服务端 Web Search 密钥
+MUSE_SITE_SEARCH_BASE_URL=https://api.tavily.com
+MUSE_SITE_SEARCH_MAX_RESULTS=5
 ```
 
 `MUSE_SITE_TEXT_API_KEY` 只放在 Vercel 服务端环境变量中，不能使用 `VITE_` 前缀、写进仓库或在客户端读取。部署后访问 `GET /api/ai/capabilities`，确认 `providers.text.ready: true` 和 `providers.text.managedBySite: true`；此时项目概览会真实调用服务端 Text AI，设置页也不会暴露或允许修改这枚站点密钥。
+
+`MUSE_SITE_SEARCH_API_KEY` 同样只放在 Vercel 服务端环境变量中。它用于 Research Assistant 的独立 Web Search，不会让 Text AI 自动联网，也不会把搜索摘要当成已验证事实。部署后访问 `GET /api/ai/capabilities`，确认 `providers.search.ready: true`；研究页的“搜索真实来源”会调用 `POST /api/research/search`，返回标题、URL、发布者、日期、摘要和（如果 Provider 返回）抓取正文。用户仍必须打开原文并确认摘录，才可以点击“保留”。
 
 如需使用 OpenAI 兼容服务，将 `MUSE_SITE_TEXT_PROVIDER`、`MUSE_SITE_TEXT_BASE_URL` 和 `MUSE_SITE_TEXT_MODEL` 改为对应供应商值即可。站点托管模式不依赖 `MUSE_SITE_SECRET`。只有启用上述 BYOK 备用模式时，才额外配置 `MUSE_SITE_SECRET=随机生成的长字符串`；未配置它时，用户保存自带 Key 会返回 `SITE_SECRET_NOT_CONFIGURED`，以避免明文保存。
 
@@ -85,6 +96,7 @@ MUSE_SITE_TEXT_MODEL=deepseek-v4-pro
 - `PATCH /api/ai/providers/:category-provider`：保存用户的 Provider 配置。
 - `POST /api/ai/providers/:category-provider/test`：真实调用 Provider 并返回连接状态。
 - `POST /api/ai/structured`：生成 Brief、研究、方向、概念、CMF 和评审文字。
+- `POST /api/research/search`：根据已确认研究问题搜索公开来源；搜索密钥只在服务端使用，结果作为候选来源返回。
 - `POST /api/ai/images/generate`：生成产品图片；图片由服务端下载、校验并以 Muse 资产地址返回。产品概念页点击“生成产品图”后会等待结果，成功后才保存；前端还会检查图片是否可加载且达到最低尺寸，质量不达标会拒绝覆盖现有结果并允许重试。
 - `POST /api/ai/images/edit`：基于 Muse 已保存的父图执行 CMF 或评审受控编辑。
 - `GET /api/ai/runs`：返回不含 Prompt、图片与密钥的安全运行元数据。

@@ -10,6 +10,7 @@ flowchart LR
   Browser --> BFF[Node BFF or Sites Worker]
   BFF --> Secret[Encrypted provider session / local secret store]
   BFF --> Text[Text AI Provider]
+  BFF --> Search[Web Search Provider]
   BFF --> Image[Image AI Provider]
   BFF --> Assets[Validated generated assets]
 ```
@@ -44,7 +45,7 @@ The repository ships curated portfolio seeds and deterministic local adapters so
 
 ### Real AI mode
 
-Text and image requests are sent from the BFF to the user-selected provider. The BFF applies provider configuration, project allow-listing, request budgets, idempotency, response validation and failure preservation before returning a result to the browser.
+Text, search and image requests are sent from the BFF to server-managed providers. The BFF applies provider configuration, project allow-listing, request budgets, idempotency, response validation and failure preservation before returning a result to the browser. Search responses retain URL, publisher, date, snippet and content-status provenance; they are candidates until a user opens the original source and accepts the excerpt.
 
 ### BYOK online mode
 
@@ -68,6 +69,6 @@ The `projectId` is carried through every demo record and visual asset. Direction
 - `pnpm build` produces the Vite client, server bundle preparation and Sites build output.
 - `pnpm start` serves `dist/client` and `/api` from one Node process for controlled environments.
 - GitHub Pages and other static hosts can show the product but cannot safely proxy provider requests.
-- Vercel can host the frontend immediately; real AI requires adapting the BFF endpoints to Vercel Functions or using a separate controlled Node/Worker service.
+- Vercel uses the same Worker implementation through `api/_muse-adapter.ts`; configure `MUSE_SITE_TEXT_*` and (for P1 research search) `MUSE_SITE_SEARCH_API_KEY` as server-side environment variables.
 
 The current system intentionally does not add a deployment-specific adapter before it has been verified in that target runtime.

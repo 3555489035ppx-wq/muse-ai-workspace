@@ -21,6 +21,30 @@ export interface StructuredProvider {
   structuredGenerate?(input: { readonly instruction: string; readonly purpose: string; readonly enableSearch: boolean; readonly schemaHint?: Readonly<Record<string, unknown>>; readonly signal?: AbortSignal }): Promise<StructuredProviderResult>;
 }
 
+export interface ResearchSearchResult {
+  readonly id: string;
+  readonly title: string;
+  readonly url: string;
+  readonly publisher: string;
+  readonly publishedAt?: string | null;
+  readonly snippet: string;
+  readonly rawContent?: string;
+  readonly contentStatus: "full" | "snippet";
+  readonly score?: number;
+  readonly favicon?: string | null;
+}
+
+export interface SearchProviderResult {
+  readonly query: string;
+  readonly results: readonly ResearchSearchResult[];
+  readonly trace: ProviderTrace;
+}
+
+export interface SearchProvider {
+  readonly descriptor: ProviderDescriptor;
+  search(input: { readonly query: string; readonly maxResults: number; readonly signal?: AbortSignal }): Promise<SearchProviderResult>;
+}
+
 export interface ImageProviderResult {
   readonly bytes: Uint8Array;
   readonly mimeType: "image/png" | "image/jpeg" | "image/webp";

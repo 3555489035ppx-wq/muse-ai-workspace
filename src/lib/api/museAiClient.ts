@@ -15,6 +15,35 @@ type StructuredData = {
     readonly usage: { readonly estimatedCostCny: number };
   };
 };
+
+export interface ResearchSearchResult {
+  readonly id: string;
+  readonly title: string;
+  readonly url: string;
+  readonly publisher: string;
+  readonly publishedAt?: string | null;
+  readonly snippet: string;
+  readonly rawContent?: string;
+  readonly contentStatus: "full" | "snippet";
+  readonly score?: number;
+  readonly favicon?: string | null;
+}
+
+export interface ResearchSearchResponse {
+  readonly runId: string;
+  readonly query: string;
+  readonly results: readonly ResearchSearchResult[];
+  readonly trace: {
+    readonly providerId: string;
+    readonly model: string;
+    readonly modelVersion: string;
+    readonly providerRequestId?: string;
+    readonly httpStatus?: number;
+    readonly rawContentLength?: number;
+    readonly parsed?: boolean;
+    readonly usage: { readonly estimatedCostCny: number };
+  };
+}
 export class MuseAiClientError extends Error {
   constructor(readonly code: string, message: string, readonly retryable: boolean, readonly status = 0) { super(message); this.name = "MuseAiClientError"; }
 }
@@ -81,6 +110,9 @@ export class MuseAiClient {
   async structured(input: { readonly projectId: string; readonly purpose: "overview" | "research" | "research_plan" | "insight" | "moodboard" | "direction" | "exploration" | "prompt" | "review" | "version" | "project_brain" | "concept" | "visual_brief" | "cmf" | "decision_map"; readonly instruction: string; readonly schemaHint?: Record<string, unknown>; readonly enableSearch?: boolean; readonly idempotencyKey: string }, signal?: AbortSignal): Promise<{ readonly ok: true; readonly runId: string; readonly result: Record<string, unknown>; readonly trace: { readonly providerId: string; readonly model: string; readonly modelVersion: string; readonly httpStatus?: number; readonly rawContentLength?: number; readonly parsed?: boolean; readonly usage: { readonly estimatedCostCny: number } } }> {
     const data = await parseEnvelope<StructuredData>(await this.#request("/api/ai/structured", { method: "POST", signal, headers: { accept: "application/json", "content-type": "application/json", "x-muse-actor-id": ACTOR_ID, "x-muse-project-id": input.projectId }, body: JSON.stringify(input) }));
     return { ...data, ok: true };
+  }
+  async researchSearch(input: { readonly projectId: string; readonly query: string; readonly questionId?: string; readonly maxResults?: number; readonly idempotencyKey: string }, signal?: AbortSignal): Promise<ResearchSearchResponse> {
+    return parseEnvelope(await this.#request("/api/research/search", { method: "POST", signal, headers: { accept: "application/json", "content-type": "application/json", "x-muse-actor-id": ACTOR_ID, "x-muse-project-id": input.projectId }, body: JSON.stringify(input) }));
   }
   async generateImage(input: { readonly projectId: string; readonly stage?: "concept"; readonly promptVersionId: string; readonly prompt: string; readonly negativePrompt?: string; readonly idempotencyKey: string }, signal?: AbortSignal): Promise<{ readonly runId: string; readonly assetUrl: string; readonly mimeType: string; readonly promptVersionId: string; readonly trace: { readonly providerId: string; readonly model: string; readonly modelVersion: string; readonly usage: { readonly estimatedCostCny: number } } }> {
     return parseEnvelope(await this.#request("/api/ai/images/generate", { method: "POST", signal, headers: { accept: "application/json", "content-type": "application/json", "x-muse-actor-id": ACTOR_ID, "x-muse-project-id": input.projectId }, body: JSON.stringify({ ...input, sourceAssetUrls: [], size: "2K" }) }));
