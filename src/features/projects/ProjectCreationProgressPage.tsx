@@ -9,7 +9,7 @@ import { useMuseStore } from "../../stores/useMuseStore.js";
 
 type StepStatus = "pending" | "processing" | "success" | "error";
 type CreationStep = { id: string; label: string; detail: string; status: StepStatus };
-type CreationRun = { status: "running" | "success" | "partial" | "error"; steps: CreationStep[]; error?: string; updatedAt: string };
+type CreationRun = { status: "running" | "success" | "partial" | "error"; steps: CreationStep[]; error?: string; startedAt?: string; updatedAt: string };
 
 const RUN_PREFIX = "project-creation:";
 const STEP_DISPLAY_MS = 140;
@@ -35,6 +35,7 @@ function makeRun(partial: Partial<CreationRun> = {}): CreationRun {
     status: partial.status ?? "running",
     steps: cloneSteps(partial.steps),
     ...(partial.error ? { error: partial.error } : {}),
+    startedAt: partial.startedAt ?? new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
 }
@@ -72,6 +73,7 @@ export function ProjectCreationProgressPage() {
   const [loading, setLoading] = useState(true);
   const [started, setStarted] = useState(false);
   const [readError, setReadError] = useState("");
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const startRef = useRef(false);
 
   const progress = useMemo(() => {
@@ -85,7 +87,7 @@ export function ProjectCreationProgressPage() {
     setStarted(true);
     setLoading(false);
     setReadError("");
-    let current = makeRun({ steps: existing?.steps });
+    let current = makeRun({ steps: existing?.steps, startedAt: existing?.startedAt });
     setRun(current);
     await saveRun(projectId, current);
     try {
@@ -121,6 +123,20 @@ export function ProjectCreationProgressPage() {
   }, [projectId]);
 
   useEffect(() => {
+    if (run.status !== "running" || !run.startedAt) {
+      setElapsedSeconds(0);
+      return undefined;
+    }
+    const updateElapsed = () => {
+      const startedAt = Date.parse(run.startedAt ?? "");
+      setElapsedSeconds(Number.isFinite(startedAt) ? Math.max(0, Math.round((Date.now() - startedAt) / 1000)) : 0);
+    };
+    updateElapsed();
+    const intervalId = window.setInterval(updateElapsed, 1000);
+    return () => window.clearInterval(intervalId);
+  }, [run.startedAt, run.status]);
+
+  useEffect(() => {
     let active = true;
     if (!projectId) return undefined;
     void readRun(projectId).then((existing) => {
@@ -143,6 +159,9 @@ export function ProjectCreationProgressPage() {
     return <AppShell mode="new-project"><div className="creation-progress-page"><p role="alert">项目不存在或已移到回收站。</p><Button icon={ArrowRight} onClick={() => navigate("/projects")}>返回我的项目</Button></div></AppShell>;
   }
 
+  const activeStep = run.steps.find((step) => step.status === "processing");
+  const elapsedLabel = elapsedSeconds < 1 ? "刚刚开始" : elapsedSeconds < 60 ? `${elapsedSeconds} 秒` : `${Math.floor(elapsedSeconds / 60)} 分 ${elapsedSeconds % 60} 秒`;
+
   return (
     <AppShell mode="new-project">
       <main className="creation-progress-page" aria-labelledby="creation-progress-title">
@@ -157,14 +176,15 @@ export function ProjectCreationProgressPage() {
         <section className="creation-progress__surface liquid-glass-surface" aria-label="项目创建进度" aria-busy={run.status === "running"}>
           <header className="creation-progress__meter-header" aria-live="polite"><div><StatusPill status={run.status === "error" || run.status === "partial" ? "warn" : run.status === "success" ? "success" : "ai"}>{run.status === "error" ? "需要重试" : run.status === "partial" ? "项目已创建" : run.status === "success" ? "已完成" : "正在制作"}</StatusPill><strong>{progress}%</strong></div><span>{loading ? "正在读取创建记录…" : started ? "Muse 正在保存并理解项目" : "可以查看项目理解"}</span></header>
           <div className="creation-progress__meter"><span style={{ width: `${progress}%` }} /></div>
+          {run.status === "running" ? <div className="creation-progress__status-note" role="status" aria-live="polite"><CircleDashed aria-hidden="true" size={18} className="creation-progress__spinner" /><div><strong>{activeStep?.label ?? "Muse 正在整理项目"}</strong><span>{activeStep?.detail ?? "正在准备下一步"}</span><small>已等待 {elapsedLabel} · 你可以离开此页，Muse 会保存当前进度</small></div></div> : null}
           <ol className="creation-progress__steps">
             {run.steps.map((step) => <li key={step.id} data-status={step.status}><span className="creation-progress__step-icon"><StepIcon status={step.status} /></span><div><strong>{step.label}</strong><p>{step.detail}</p></div><small>{step.status === "success" ? "完成" : step.status === "processing" ? "处理中" : step.status === "error" ? "失败" : "等待"}</small></li>)}
           </ol>
-          {run.status === "error" || readError ? <div className="creation-progress__error" role="alert"><AlertCircle size={17} /><span>{readError || run.error || "创建没有完成，已有内容会保留。"}</span><Button variant="quiet" icon={RefreshCw} onClick={() => { startRef.current = false; void start(run); }}>重新生成理解</Button></div> : null}
+          {run.status === "error" || readError ? <div className="creation-progress__error" role="alert"><AlertCircle size={17} /><span>{readError || run.error || "创建没有完成，已有内容会保留。"}</span><Button variant="quiet" icon={RefreshCw} onClick={() => { startRef.current = false; void start({ ...run, startedAt: new Date().toISOString(), status: "running" }); }}>重新生成理解</Button></div> : null}
           {run.status === "partial" ? <div className="creation-progress__error" role="status"><AlertCircle size={17} /><span>项目已创建，但 AI 项目理解暂时生成失败。当前项目内容已保存，可在下一页手动完善或重试。</span><Button variant="quiet" icon={ArrowRight} onClick={() => navigate(`/projects/${projectId}/overview`)}>手动完善</Button></div> : null}
           {run.status === "success" ? <div className="creation-progress__next"><Sparkles size={17} /><span>Project Understanding 与 Design Brief Draft 已保存。请先人工确认，后续阶段会按顺序生成。</span><Button icon={ArrowRight} onClick={() => navigate(`/projects/${projectId}/overview`)}>查看项目理解</Button></div> : null}
         </section>
-        <p className="creation-progress__footnote">本页不会生成图片。产品概念页调用真实图片 API 后，会等待每一张结果返回，并在保存前完成尺寸、可加载性、来源与重复视觉校验。</p>
+        <p className="creation-progress__footnote">本页不会生成图片。项目理解完成后，工作区阶段会自动解锁；如果暂时离开，稍后从该项目进入即可继续。</p>
       </main>
     </AppShell>
   );

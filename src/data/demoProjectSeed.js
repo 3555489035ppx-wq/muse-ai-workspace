@@ -9,6 +9,7 @@ function sourceId(projectId, evidenceId) {
 }
 
 function createDemoDesignInsights(industrial = {}, projectId = industrial.projectId ?? null) {
+  const selectedIds = new Set((industrial.selectedInsightIds ?? []).map(String));
   return (industrial.insights ?? []).map((item, index) => {
     const evidenceIds = item.evidenceIds ?? item.sourceEvidenceIds ?? [];
     const title = item.title ?? item.statement ?? `项目洞察 ${index + 1}`;
@@ -27,8 +28,12 @@ function createDemoDesignInsights(industrial = {}, projectId = industrial.projec
       sourceEvidenceIds: evidenceIds,
       evidenceStrength: evidenceIds.length > 1 ? "strong" : "preliminary",
       relatedBriefFields: [],
-      status: item.status === "rejected" ? "rejected" : "confirmed",
-      confirmed: item.status !== "rejected",
+      // The seed includes candidate insights beyond the three that the demo
+      // decision map says a human retained. Keep those candidates visible but
+      // do not mark them as confirmed, otherwise the max-four confirmation
+      // gate becomes impossible to complete.
+      status: item.status === "rejected" ? "rejected" : selectedIds.size ? (selectedIds.has(String(item.id)) ? "confirmed" : "candidate") : (index < 3 ? "confirmed" : "candidate"),
+      confirmed: item.status !== "rejected" && (selectedIds.size ? selectedIds.has(String(item.id)) : index < 3),
       userEdited: false,
       evidenceSourceCount: evidenceIds.length,
       image: null,

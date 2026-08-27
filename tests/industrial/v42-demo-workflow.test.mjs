@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { createIndustrialPortfolioSeeds } from "../../src/data/industrialPortfolio.js";
 import { createJinganbaoSeed } from "../../src/data/jinganbao.js";
 import { enrichDemoProjectSeed, repairDemoIndustrialSelection } from "../../src/data/demoProjectSeed.js";
+import { buildProjectBrain } from "../../src/services/ai/projectBrain.ts";
 import {
   DEMO_PROJECT_IDS,
   DEMO_PROJECT_REGISTRY,
@@ -122,4 +123,15 @@ test("each V4.2 demo project has a complete traceable workflow and local visual 
 
   const allVisualPaths = projects.flatMap((project) => [...projectImagePaths.get(project.id)]);
   assert.equal(new Set(allVisualPaths).size, allVisualPaths.length, "demo projects share image assets");
+});
+
+test("demo insight confirmation follows the explicit selected subset", () => {
+  const { project } = createJinganbaoSeed();
+  const enriched = enrichDemoProjectSeed(project, project.industrial.brief);
+  const brain = buildProjectBrain(enriched);
+  assert.equal(enriched.designInsights.filter((item) => item.status === "confirmed").length, enriched.confirmedInsightIds.length);
+  assert.deepEqual(
+    brain.confirmedInsights.map((item) => item.id),
+    enriched.confirmedInsightIds,
+  );
 });

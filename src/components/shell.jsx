@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
-  Archive, Boxes, ChevronDown, Compass, FlaskConical, FolderKanban, GalleryHorizontalEnd,
+  Archive, Boxes, ChevronDown, CircleDashed, Compass, FlaskConical, FolderKanban, GalleryHorizontalEnd,
   Image, LayoutDashboard, Library, Menu, PanelRightClose, PanelRightOpen, Plus, Search, Settings,
   Sparkles, Trash2, X,
 } from 'lucide-react';
@@ -33,7 +33,7 @@ export function Brand() {
   return <NavLink className="brand" to="/projects" aria-label="返回 Muse 项目首页"><img className="brand__wordmark" src="/assets/brand/muse-handwritten-wordmark.jpg" alt="Muse"/></NavLink>;
 }
 
-export function SideNavigation({ project, open, onClose }) {
+export function SideNavigation({ project, open, onClose, projectNavigationLocked = false }) {
   const navigate = useNavigate();
   const pushToast = useMuseStore((state) => state.pushToast);
   const account = useMuseStore((state) => state.account);
@@ -46,12 +46,18 @@ export function SideNavigation({ project, open, onClose }) {
       {globalLinks.map(([path, label, Icon]) => <NavLink key={path} to={path} end={path === '/projects'} onClick={onClose}><Icon size={18}/>{label}</NavLink>)}
     </nav>
     <div className="sidebar__section"><p>项目工作区</p>
-      {project ? <button className="project-switcher" onClick={() => navigate(`/projects/${project.id}/overview`)}><span className="project-switcher__thumb" style={project.coverImage ? { backgroundImage: `url("${project.coverImage}")` } : undefined}/><span><strong>{project.name}</strong><small>{stageLabel[project.stage] ?? '工业设计项目'}</small></span><ChevronDown size={15}/></button> : <div className="sidebar__project-empty"><strong>尚未打开项目</strong><span>从“我的项目”打开或新建一个项目</span></div>}
-      <nav className="sidebar__nav" aria-label="项目工作区导航">
+      {project
+        ? projectNavigationLocked
+          ? <div className="project-switcher project-switcher--locked" aria-disabled="true" title="项目理解完成后解锁"><span className="project-switcher__thumb" style={project.coverImage ? { backgroundImage: `url("${project.coverImage}")` } : undefined}/><span><strong>{project.name}</strong><small>正在生成项目理解</small></span><CircleDashed size={15} className="project-switcher__progress"/></div>
+          : <button className="project-switcher" onClick={() => navigate(`/projects/${project.id}/overview`)}><span className="project-switcher__thumb" style={project.coverImage ? { backgroundImage: `url("${project.coverImage}")` } : undefined}/><span><strong>{project.name}</strong><small>{stageLabel[project.stage] ?? '工业设计项目'}</small></span><ChevronDown size={15}/></button>
+        : <div className="sidebar__project-empty"><strong>尚未打开项目</strong><span>从“我的项目”打开或新建一个项目</span></div>}
+      <nav className="sidebar__nav" aria-label="项目工作区导航" aria-disabled={projectNavigationLocked || undefined}>
         {workspaceSections.map(([key, label]) => {
           const Icon = workspaceIcons[key];
           return project
-            ? <NavLink key={key} to={`/projects/${project.id}/${key}`} onClick={onClose}><Icon size={18}/>{label}</NavLink>
+            ? projectNavigationLocked
+              ? <span key={key} className="sidebar__disabled" aria-disabled="true" title="项目理解完成后解锁"><Icon size={18}/>{label}</span>
+              : <NavLink key={key} to={`/projects/${project.id}/${key}`} onClick={onClose}><Icon size={18}/>{label}</NavLink>
             : <span data-tour={key === 'research' ? 'research' : key === 'moodboard' ? 'moodboard' : key === 'directions' ? 'direction' : key === 'critique' ? 'critique' : undefined} className="sidebar__disabled" key={key} aria-disabled="true"><Icon size={18}/>{label}</span>;
         })}
       </nav>
@@ -95,6 +101,11 @@ export function AppShell({ project: projectProp = null, children, context = null
   const { pathname, search } = useLocation();
   const routeProject = useMuseStore((state) => projectId ? state.projects.find((item) => item.id === projectId) : null);
   const project = projectProp ?? routeProject ?? null;
+  const projectNavigationLocked = mode === 'new-project' && Boolean(project && (
+    project.creationReady !== true
+    || project.projectUnderstandingStatus === 'queued'
+    || project.projectUnderstandingStatus === 'running'
+  ));
   const [navOpen, setNavOpen] = useState(false);
   const [contextOpen, setContextOpen] = useState(() => !context || typeof window === 'undefined' || window.matchMedia('(min-width: 1281px)').matches);
   const previousViewportWidth = useRef(typeof window === 'undefined' ? 0 : window.innerWidth);
@@ -127,7 +138,7 @@ export function AppShell({ project: projectProp = null, children, context = null
     return () => window.removeEventListener('keydown', closeOnEscape);
   }, [contextOpen]);
   return <div className={`app-shell ${mode ? `app-shell--${mode}` : ''} ${context ? 'app-shell--with-context' : ''} ${context && !contextOpen ? 'app-shell--context-collapsed' : ''}`}>
-    <SideNavigation project={project} open={navOpen} onClose={() => setNavOpen(false)}/>
+    <SideNavigation project={project} open={navOpen} onClose={() => setNavOpen(false)} projectNavigationLocked={projectNavigationLocked}/>
     {navOpen ? <button className="sidebar-scrim" aria-label="关闭导航" onClick={() => setNavOpen(false)}/> : null}
     <div className="app-shell__main"><Topbar project={project} onOpenNavigation={() => setNavOpen(true)} contextOpen={contextOpen} onToggleContext={context ? () => setContextOpen((value) => !value) : null}/><main className="app-shell__content">{children}</main></div>
     {context ? <aside className="context-panel liquid-glass-surface" aria-label="项目辅助面板" data-state={contextOpen ? 'open' : 'closed'} aria-hidden={!contextOpen}><button className="context-panel__collapse" aria-label="收起辅助面板" onClick={() => setContextOpen(false)}><PanelRightClose size={16}/></button>{context}</aside> : null}

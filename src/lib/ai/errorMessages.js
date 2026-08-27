@@ -16,6 +16,9 @@ const CODE_MESSAGES = {
   TEXT_PROVIDER_INTERNAL_ERROR: "真实 AI 服务异常，请稍后重试。",
   PROVIDER_OVERLOADED: "真实 AI 服务当前繁忙，请稍后重试。",
   TEXT_PROVIDER_OVERLOADED: "真实 AI 服务当前繁忙，请稍后重试。",
+  SEARCH_PROVIDER_NOT_CONFIGURED: "真实来源搜索还没有启用。请管理员在部署环境中添加 MUSE_SITE_SEARCH_API_KEY；你仍可手动搜索或添加链接。",
+  SEARCH_PROVIDER_DISABLED: "真实来源搜索暂未启用。请联系部署管理员检查站点搜索配置；你仍可手动搜索或添加链接。",
+  SEARCH_PROVIDER_UNREACHABLE: "真实来源搜索暂时无法访问，请稍后重试；你仍可手动搜索或添加链接。",
 };
 
 function responseCode(response) {

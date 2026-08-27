@@ -87,8 +87,21 @@ function createVersionRecords(project, brief, assets) {
   return { versions, edges };
 }
 
+function hasConsistentInsightSelection(project) {
+  const selectedIds = project?.confirmedInsightIds ?? project?.industrial?.selectedInsightIds ?? [];
+  if (!Array.isArray(selectedIds) || selectedIds.length < 2) return false;
+  const confirmedIds = (project?.designInsights ?? [])
+    .filter((item) => item?.status === "confirmed" || item?.confirmed === true)
+    .map((item) => item.id);
+  return confirmedIds.length === selectedIds.length && confirmedIds.every((id) => selectedIds.includes(id));
+}
+
 function shouldRefresh(existing, project) {
   const industrial = existing?.industrial;
+  const selectedInsightIds = existing?.confirmedInsightIds ?? industrial?.selectedInsightIds ?? [];
+  const insightSelectionDrift = Array.isArray(selectedInsightIds)
+    && selectedInsightIds.length > 0
+    && !hasConsistentInsightSelection(existing);
   return !industrial
     || existing.coverImage !== project.coverImage
     || industrial.schemaVersion !== project.industrial.schemaVersion
@@ -111,7 +124,8 @@ function shouldRefresh(existing, project) {
     || !existing.projectOverview?.expectedOutcomes
     || !existing.projectOverview?.outcomeDefinition
     || existing.designInsights?.length < 3
-    || existing.confirmedInsightIds?.length < 2;
+    || existing.confirmedInsightIds?.length < 2
+    || insightSelectionDrift;
 }
 
 export async function seedIndustrialPortfolio(database) {
@@ -126,6 +140,7 @@ export async function seedIndustrialPortfolio(database) {
     const seed = seeds[index];
     const current = existingProjects[index];
     const enrichedSeedProject = enrichDemoProjectSeed(seed.project, seed.project.industrial.brief);
+    const keepCurrentInsights = hasConsistentInsightSelection(current);
     const industrialSeed = current?.industrial
       ? {
           ...enrichedSeedProject.industrial,
@@ -162,9 +177,9 @@ export async function seedIndustrialPortfolio(database) {
           projectOverview,
           designBrief,
           researchWorkspace,
-          designInsights: current.designInsights?.length >= 3 && current.confirmedInsightIds?.length >= 2 ? current.designInsights : enrichedSeedProject.designInsights,
-          confirmedInsightIds: current.confirmedInsightIds?.length >= 2 ? current.confirmedInsightIds : enrichedSeedProject.confirmedInsightIds,
-          insightGenerationMeta: current.designInsights?.length >= 3 && current.confirmedInsightIds?.length >= 2 ? current.insightGenerationMeta : enrichedSeedProject.insightGenerationMeta,
+          designInsights: keepCurrentInsights ? current.designInsights : enrichedSeedProject.designInsights,
+          confirmedInsightIds: keepCurrentInsights ? current.confirmedInsightIds : enrichedSeedProject.confirmedInsightIds,
+          insightGenerationMeta: keepCurrentInsights ? current.insightGenerationMeta : enrichedSeedProject.insightGenerationMeta,
           updatedAt: current.updatedAt,
         }
       : { ...enrichedSeedProject, industrial };

@@ -2274,6 +2274,12 @@ body {
 .creation-progress__meter-header strong { color: var(--muse-text-primary); font-size: 22px; font-variant-numeric: tabular-nums; }
 .creation-progress__meter { height: 5px; margin: var(--muse-space-4) 0 var(--muse-space-6); overflow: hidden; border-radius: 999px; background: var(--muse-border-subtle); }
 .creation-progress__meter span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--muse-focus), var(--muse-success)); transition: width .36s ease; }
+.creation-progress__status-note { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: var(--muse-space-4); align-items: start; margin: 0 0 var(--muse-space-5); padding: var(--muse-space-4); border: 1px solid color-mix(in oklab, var(--muse-focus) 28%, var(--muse-border)); border-radius: var(--muse-radius-control); background: color-mix(in oklab, var(--muse-focus) 7%, var(--muse-surface-raised)); }
+.creation-progress__status-note > svg { margin-top: 2px; color: var(--muse-focus); }
+.creation-progress__status-note > div { display: grid; gap: 3px; min-width: 0; }
+.creation-progress__status-note strong { color: var(--muse-text-primary); font-size: 15px; }
+.creation-progress__status-note span { color: var(--muse-text-secondary); font-size: 13px; line-height: var(--muse-leading-body); }
+.creation-progress__status-note small { margin-top: 4px; color: var(--muse-text-muted); font-size: 12px; line-height: 1.5; }
 .creation-progress__steps { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
 .creation-progress__steps li { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; column-gap: var(--muse-space-6); row-gap: var(--muse-space-2); align-items: start; min-height: 78px; padding: var(--muse-space-4) 0; border-top: 1px solid var(--muse-border-subtle); color: var(--muse-text-muted); }
 .creation-progress__steps li[data-status="processing"] { color: var(--muse-focus); }
@@ -2300,6 +2306,7 @@ body {
   .creation-progress__header { grid-template-columns: 1fr; }
   .creation-progress__orb { display: none; }
   .creation-progress__surface { padding: var(--muse-space-5); }
+  .creation-progress__status-note { grid-template-columns: 24px minmax(0, 1fr); gap: var(--muse-space-3); }
   .creation-progress__meter-header { align-items: flex-start; flex-direction: column; }
   .creation-progress__steps li { grid-template-columns: 30px minmax(0, 1fr); column-gap: var(--muse-space-5); }
   .creation-progress__steps small { grid-column: 2; padding-top: 0; }
@@ -2310,7 +2317,8 @@ body {
   .creation-progress__orb,
   .creation-progress__orb span,
   .creation-progress__orb i,
-  .creation-progress__spinner { animation: none; }
+  .creation-progress__spinner,
+  .project-switcher__progress { animation: none; }
   .creation-progress__meter span { transition: none; }
 }
 
@@ -3584,6 +3592,8 @@ select {
 .project-switcher > span:nth-child(2) { min-width: 0; }
 .project-switcher strong { display: -webkit-box; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.35; }
 .project-switcher small { white-space: nowrap; }
+.project-switcher--locked { cursor: wait; opacity: .78; }
+.project-switcher__progress { margin-left: auto; color: var(--muse-focus); animation: creation-spin 1s linear infinite; }
 
 @media (max-width: 760px) {
   .provider-status-head { grid-template-columns: auto minmax(0, 1fr); }
