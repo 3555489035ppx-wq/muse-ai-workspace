@@ -50,6 +50,8 @@ export interface ProviderConfigView {
   readonly connectionStatus: ConnectionStatus;
   readonly secretConfigured: boolean;
   readonly keyHint?: string;
+  /** The deployment owns this credential; visitors cannot view or modify it. */
+  readonly managedBySite?: boolean;
   readonly capabilities: readonly string[];
   readonly updatedAt?: string;
   readonly lastError?: string;

@@ -443,6 +443,18 @@ export function IndustrialOverviewPage() {
     }
   };
   const currentVersions = project.projectUnderstandingVersions ?? [];
+  const understandingFailed = project.projectUnderstandingStatus === "error";
+  if (understandingFailed) {
+    return <Page project={project} eyebrow="项目概览 · Project Overview" title="项目理解尚未生成" description="原始需求已保存；在获得真实 AI 结果或由你手动完成项目理解前，Muse 不会进入设计简报。" showWorkflowConversion={false} actions={<><SecondaryButton onClick={() => void generateOverview(projectId)}><RefreshCw size={15}/>重新生成理解</SecondaryButton><PrimaryButton onClick={() => setDrawer("edit")}>手动完善项目理解</PrimaryButton></>}>
+      <main className="project-overview" aria-label="项目理解失败">
+        <div className="project-overview__error" role="alert"><CircleAlert size={17}/><div><strong>AI 项目理解暂时生成失败。</strong><span>{project.projectUnderstandingError || "AI 服务暂时不可用，原始需求已安全保存。"}</span></div><button onClick={() => void generateOverview(projectId)}>重新生成</button></div>
+        <section className="project-overview__identity"><div><p className="industrial-kicker">原始输入仍可编辑</p><h2>{project.originalBrief?.projectName || project.name}</h2><p>{project.originalBrief?.designGoal || project.description || "请补充设计目标后重新生成项目理解。"}</p></div></section>
+        <footer className="project-overview__footer"><div><FileText size={18}/><div><strong>尚未生成可确认的 AI 建议</strong><p>不会展示本地模板或历史推断为 AI 结果，也不能继续进入研究与方向。</p></div></div><div><button className="industrial-button" onClick={() => setDrawer("original")}><FileText size={15}/>查看原始需求</button><button className="industrial-button" onClick={() => setDrawer("edit")}><Edit3 size={15}/>手动填写</button></div></footer>
+      </main>
+      {drawer === "original" ? <OriginalBriefDrawer project={project} sourceBrief={sourceBrief} onClose={() => setDrawer(null)} onSave={saveOriginalBrief}/> : null}
+      {drawer === "edit" ? <OverviewEditorDrawer overview={overview} onClose={() => setDrawer(null)} onSave={saveOverview}/> : null}
+    </Page>;
+  }
   return <Page project={project} eyebrow="项目概览 · Project Overview" title={overview.projectName} description={`${overview.projectType.join(" · ")}${metadata ? `  ·  ${metadata}` : ""}  ·  ${understandingConfirmed ? "项目理解已确认" : "等待人工确认"}`} showWorkflowConversion={false} actions={<><SecondaryButton disabled={project.projectUnderstandingStatus === "running" || aiJob.status === "processing"} onClick={() => void generateOverview(projectId)}><RefreshCw size={15}/>重新生成理解</SecondaryButton>{understandingConfirmed ? <PrimaryButton onClick={() => navigate(`/projects/${projectId}/${targetPath}`)}>{currentConversion.label}</PrimaryButton> : <PrimaryButton onClick={() => void continueFromUnderstanding()}>确认并继续</PrimaryButton>}</>}>
     <main className="project-overview" aria-label="结构化项目概览">
       {project.overviewStale ? <div className="project-overview__notice"><CircleAlert size={17}/><span>原始需求已更新，当前项目概览尚未同步。</span><button onClick={() => void generateOverview(projectId)}>更新概览</button><button className="project-overview__notice-dismiss" onClick={() => void dismissOverviewStale(projectId)}>暂不更新</button></div> : null}
@@ -535,6 +547,8 @@ export function IndustrialBriefPage() {
   const navigate = useNavigate();
   const { project, industrial, projectId } = useIndustrialProject();
   const brief = project?.designBrief;
+  const understandingRequiresGate = Boolean(project?.isDraft || project?.projectUnderstandingStatus || project?.projectUnderstandingVersions?.length);
+  const understandingConfirmed = !understandingRequiresGate || Boolean(project?.projectUnderstandingConfirmedAt);
   const generateBrief = useMuseStore((state) => state.generateIndustrialBrief);
   const ensureProject = useMuseStore((state) => state.ensureIndustrialProject);
   const updateBrief = useMuseStore((state) => state.updateDesignBrief);
@@ -548,10 +562,10 @@ export function IndustrialBriefPage() {
   const migrationAttempted = useRef(false);
 
   useEffect(() => {
-    if (!project || !industrial || brief || autoGenerationAttempted.current) return;
+    if (!project || !industrial || !understandingConfirmed || brief || autoGenerationAttempted.current) return;
     autoGenerationAttempted.current = true;
     void generateBrief(projectId).catch(() => undefined);
-  }, [brief, generateBrief, industrial, project, projectId]);
+  }, [brief, generateBrief, industrial, project, projectId, understandingConfirmed]);
 
   useEffect(() => {
     if (!project || !industrial || migrationAttempted.current) return;
@@ -560,6 +574,7 @@ export function IndustrialBriefPage() {
   }, [ensureProject, industrial, project, projectId]);
 
   if (!project) return <StateBoundary project={project}/>;
+  if (!understandingConfirmed) return <Page project={project} eyebrow="设计简报" title="请先确认项目理解" description="设计简报只能使用你确认过的项目理解，避免未经验证的 AI 建议直接影响后续研究与方向。" showWorkflowConversion={false} showAiToolbar={false} actions={<PrimaryButton onClick={() => navigate(`/projects/${projectId}/overview`)}>返回项目概览</PrimaryButton>}><main className="project-overview"><div className="project-understanding-gate" role="status"><div><p className="industrial-kicker">HUMAN CONFIRMATION GATE</p><strong>项目理解尚未确认</strong><span>请在项目概览中检查、编辑或重新生成 AI 建议；确认后 Muse 才会创建设计简报。</span></div><PrimaryButton onClick={() => navigate(`/projects/${projectId}/overview`)}>去确认项目理解<ArrowRight size={16}/></PrimaryButton></div></main></Page>;
   if (!brief) return <Page project={project} eyebrow="设计简报" title="正在形成设计问题" description="Muse 正在分离用户事实、设计约束与工作流要求。" showWorkflowConversion={false} showAiToolbar={false}><div className="project-overview__loading"><Sparkles size={20}/><strong>正在生成设计简报</strong><p>没有完成前不会进入研究，也不会生成图片。</p></div></Page>;
   const save = async (patch) => { try { await updateBrief(projectId, patch); setDrawer(null); setChangeNotice(Boolean(project.briefStatus === "confirmed")); } catch (error) { setChangeNotice(true); } };
   const confirm = async () => { await confirmBrief(projectId); navigate(`/projects/${projectId}/research`); };

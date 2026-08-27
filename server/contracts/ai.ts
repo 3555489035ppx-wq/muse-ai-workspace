@@ -89,6 +89,8 @@ export interface AiProviderCapability {
   readonly enabled: boolean;
   readonly ready: boolean;
   readonly mode?: "real" | "demo";
+  /** This provider is configured by the deployment, not the current visitor. */
+  readonly managedBySite?: boolean;
   readonly capabilities: readonly AiOperation[];
   readonly configurationHint?: string;
 }

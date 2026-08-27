@@ -109,6 +109,35 @@ function defaultConfig(category) {
   return { ...DEFAULTS[category] };
 }
 
+/**
+ * A public Muse deployment should not depend on every visitor bringing a key.
+ * When the site owner configures a provider in the hosting environment, that
+ * credential is the only configuration used for the category. It never enters
+ * the browser, cookies, run metadata, or the provider configuration response.
+ */
+function siteManagedConfig(env, category) {
+  const prefix = `MUSE_SITE_${category.toUpperCase()}`;
+  const apiKey = String(env[`${prefix}_API_KEY`] ?? "").trim();
+  if (!apiKey) return undefined;
+
+  const provider = canonicalProvider(String(env[`${prefix}_PROVIDER`] ?? (category === "text" ? "openai" : "openai")).trim());
+  if (!supportedProvider(category, provider) || (category === "image" && provider === "demo-visual")) {
+    throw new WorkerApiError("SITE_PROVIDER_INVALID", `站点托管的 ${category === "text" ? "Text" : "Image"} AI Provider 配置无效。`, 503);
+  }
+
+  const defaults = defaultFor(category, provider);
+  return mergeConfig(category, defaultConfig(category), {
+    provider,
+    displayName: String(env[`${prefix}_DISPLAY_NAME`] ?? `Muse ${category === "text" ? "Text" : "Image"} AI`).trim(),
+    baseUrl: String(env[`${prefix}_BASE_URL`] ?? defaults.baseUrl).trim(),
+    modelId: String(env[`${prefix}_MODEL`] ?? defaults.modelId).trim(),
+    apiKey,
+    enabled: true,
+    connectionStatus: "connected",
+    managedBySite: true,
+  });
+}
+
 function supportedProvider(category, provider) {
   if (category === "text") return ["deepseek", "openai", "custom", "custom-openai-compatible"].includes(provider);
   return ["openai", "custom", "custom-openai-compatible", "demo-visual"].includes(provider);
@@ -190,11 +219,16 @@ function providerView(category, config) {
     ...safe,
     model: config.modelId,
     secretConfigured: Boolean(apiKey),
-    keyHint: maskedKey(apiKey),
+    // A site-owned credential belongs to the deployment, not the visitor. Do
+    // not reveal even a masked suffix to the client.
+    keyHint: config.managedBySite ? undefined : maskedKey(apiKey),
+    managedBySite: Boolean(config.managedBySite),
   };
 }
 
 async function readConfig(env, request, category) {
+  const managed = siteManagedConfig(env, category);
+  if (managed) return managed;
   const token = readCookies(request).get(COOKIE_NAMES[category]);
   const stored = await decryptJson(env, token);
   if (!stored || typeof stored !== "object") return defaultConfig(category);
@@ -232,8 +266,9 @@ function providerCapabilities(env, configs) {
       enabled: Boolean(config.enabled) && serviceEnabled,
       ready,
       mode: demo ? "demo" : "real",
+      managedBySite: Boolean(config.managedBySite),
       capabilities: config.capabilities,
-      configurationHint: configured ? undefined : category === "text" ? "在设置中输入 Text AI API Key" : "配置 Image AI API Key 后才能真实生成图片",
+      configurationHint: configured ? undefined : category === "text" ? "站点尚未配置 Text AI；也可在设置中使用自己的 API Key" : "站点尚未配置 Image AI；也可在设置中使用自己的 API Key",
     };
   };
   const text = view("text", configs.text);
@@ -467,6 +502,9 @@ async function handleProviderRoutes(request, env, url, id) {
   }
   const category = categoryFromProviderId(providerId);
   if (!category) throw new WorkerApiError("INVALID_PROVIDER_ID", "Provider 配置标识无效。", 400);
+  if (siteManagedConfig(env, category) && request.method !== "GET") {
+    throw new WorkerApiError("SITE_PROVIDER_MANAGED", "当前站点使用托管 AI 服务，访客无需配置或修改 API Key。", 403);
+  }
   const current = await readConfig(env, request, category);
   if (parts[4] === "test") {
     if (request.method !== "POST") throw new WorkerApiError("METHOD_NOT_ALLOWED", "请求方法不受支持。", 405);
