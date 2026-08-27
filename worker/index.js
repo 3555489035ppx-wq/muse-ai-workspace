@@ -128,9 +128,9 @@ function siteManagedConfig(env, category) {
   const defaults = defaultFor(category, provider);
   return mergeConfig(category, defaultConfig(category), {
     provider,
-    displayName: String(env[`${prefix}_DISPLAY_NAME`] ?? `Muse ${category === "text" ? "Text" : "Image"} AI`).trim(),
-    baseUrl: String(env[`${prefix}_BASE_URL`] ?? defaults.baseUrl).trim(),
-    modelId: String(env[`${prefix}_MODEL`] ?? defaults.modelId).trim(),
+    displayName: String(env[`${prefix}_DISPLAY_NAME`] ?? `Muse ${category === "text" ? "Text" : "Image"} AI`).trim() || defaults.displayName,
+    baseUrl: String(env[`${prefix}_BASE_URL`] ?? defaults.baseUrl).trim() || defaults.baseUrl,
+    modelId: String(env[`${prefix}_MODEL`] ?? defaults.modelId).trim() || defaults.modelId,
     apiKey,
     enabled: true,
     connectionStatus: "connected",
