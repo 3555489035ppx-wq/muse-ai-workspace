@@ -72,6 +72,20 @@ export const researchResponseSchema = z.object({
   insights: z.array(z.object({ statement: z.string().min(8), rationale: z.string().min(8).optional(), opportunity: z.string().min(8).optional() }).passthrough()).optional(),
 }).passthrough();
 
+const researchQuestionPlanSchema = z.object({
+  questionId: z.string().min(1),
+  whyThisMatters: z.string().min(8),
+  evidenceNeed: z.string().min(8),
+  querySuggestions: z.array(z.string().min(4)).min(2).max(4),
+  preferredSources: z.array(z.string().min(2)).min(1).max(4),
+}).passthrough();
+
+export const researchPlanResponseSchema = z.object({
+  questionPlans: z.array(researchQuestionPlanSchema).min(1).max(5),
+  gaps: z.array(z.string().min(4)).max(8),
+  nextActions: z.array(z.string().min(4)).min(1).max(6),
+}).passthrough();
+
 export const insightResponseSchema = z.object({
   insights: z.array(z.object({
     id: z.string().min(1).optional(),
@@ -195,6 +209,7 @@ export function normalizeConceptResponse(value: unknown): unknown {
 const schemasByPurpose: Readonly<Record<string, z.ZodType>> = {
   overview: overviewResponseSchema,
   research: researchResponseSchema,
+  research_plan: researchPlanResponseSchema,
   insight: insightResponseSchema,
   exploration: conceptsResponseSchema,
   concept: conceptsResponseSchema,

@@ -14,11 +14,11 @@ import { isDemoPortfolioProject, ensureDemoVisuals } from '../data/demoVisuals';
 import { DemoVisualProvider } from '../services/visuals/demoVisualProvider';
 import { buildDeterministicReview, transitionIndustrialState } from '../domain/industrial/verticalSlice';
 import { createIndustrialDraftState, mergeIndustrialBrief, mergeIndustrialCmf, mergeIndustrialConcepts, mergeIndustrialDirections, normalizeIndustrialReview } from '../data/industrialDraft';
-import { briefInstruction, cmfInstruction, conceptInstruction, directionInstruction, industrialSchemaHints, insightInstruction, overviewInstruction, requestIndustrialImage, requestIndustrialImageEdit, requestIndustrialStructured, researchInstruction, reviewInstruction, validateIndustrialImage, versionInstruction, visualBriefInstruction } from '../lib/ai/industrialAi';
+import { briefInstruction, cmfInstruction, conceptInstruction, directionInstruction, industrialSchemaHints, insightInstruction, overviewInstruction, requestIndustrialImage, requestIndustrialImageEdit, requestIndustrialStructured, researchInstruction, researchPlanInstruction, reviewInstruction, validateIndustrialImage, versionInstruction, visualBriefInstruction } from '../lib/ai/industrialAi';
 import { hydrateIndustrialVisuals } from '../lib/ai/industrialVisuals';
 import { createOriginalBriefSnapshot, createProjectOverview, validateProjectOverview } from '../lib/ai/projectOverviewProvider';
 import { completeCoreTension, createDesignBrief, designBriefInstruction, validateDesignBrief } from '../lib/ai/designBriefProvider';
-import { acceptResearchEvidence as acceptResearchEvidenceModel, createCandidateEvidence, createResearchSource as createResearchSourceRecord, createResearchWorkspace, evidenceAction, migrateResearchWorkspace, recomputeResearchWorkspace, updateResearchEvidence } from '../lib/ai/researchEvidenceProvider';
+import { acceptResearchEvidence as acceptResearchEvidenceModel, createCandidateEvidence, createResearchAssistant, createResearchSource as createResearchSourceRecord, createResearchWorkspace, evidenceAction, migrateResearchWorkspace, normalizeResearchAssistantResult, recomputeResearchWorkspace, updateResearchEvidence } from '../lib/ai/researchEvidenceProvider';
 import { generateDesignInsights, getAcceptedResearchEvidence, getDesignInsightContextSignature, qualityReviewDesignInsights } from '../lib/ai/designInsightProvider';
 import { generateDesignDirections, getDirectionRecommendation, normalizeDirectionResponse } from '../lib/ai/designDirectionProvider';
 import { ensureLocalAccount, LOCAL_ACCOUNT_PREFERENCE, updateLocalAccount } from '../lib/account/localAccount';
@@ -890,6 +890,57 @@ export const useMuseStore = create((set, get) => ({
     const next = { ...current, designBrief: nextBrief, briefStatus: 'draft', briefConfirmedAt: null, briefStale: false, briefVersion: (current.briefVersion ?? 1) + 1, updatedAt: now() };
     await db.projects.put(next);
     set((state) => ({ projects: state.projects.map((item) => item.id === projectId ? next : item) }));
+    return next;
+  },
+
+  generateIndustrialResearchPlan: async (projectId) => {
+    let current = get().projects.find((item) => item.id === projectId);
+    if (!current?.industrial) throw new Error('INDUSTRIAL_PROJECT_NOT_FOUND');
+    current = await get().ensureResearchWorkspace(projectId);
+    const workspace = current.researchWorkspace;
+    if (!workspace) throw new Error('RESEARCH_WORKSPACE_NOT_FOUND');
+    set({ aiJob: { status: 'processing', message: '正在把研究问题转成可执行的检索线索；不会伪造研究事实…' } });
+    const response = await requestIndustrialStructured({ project: current, purpose: 'research_plan', instruction: researchPlanInstruction(current, current.industrial), schemaHint: industrialSchemaHints.researchPlan, enableSearch: false });
+    const responseIsValid = response?.source === 'live' && response?.ok === true && response?.parsed === true && response?.validation?.success === true;
+    if (!responseIsValid) {
+      const errorMessage = `研究计划生成失败：${localizeAiFailure(response, '真实 Text AI 暂时不可用，当前研究问题与已有材料未被改写。')}`;
+      const failedAssistant = createResearchAssistant({
+        ...(workspace.researchAssistant ?? {}),
+        status: 'error',
+        source: response?.source === 'live' ? 'live' : 'none',
+        provider: response?.trace?.providerId ?? workspace.researchAssistant?.provider ?? null,
+        model: response?.trace?.model ?? workspace.researchAssistant?.model ?? null,
+        errorMessage,
+      });
+      const failed = persistProjectBrain({ ...current, researchWorkspace: { ...workspace, researchAssistant: failedAssistant }, updatedAt: now() });
+      await db.projects.put(failed);
+      set((state) => ({ projects: state.projects.map((item) => item.id === projectId ? failed : item), aiJob: { status: 'failed', errorCode: response?.errorCode, message: errorMessage } }));
+      return failed;
+    }
+    const normalized = normalizeResearchAssistantResult(response.result, workspace.questions);
+    if (!normalized.questionPlans.length) {
+      const errorMessage = '研究计划生成失败：AI 返回的研究问题无法与当前简报对应，已有研究内容未被覆盖。';
+      const failedAssistant = createResearchAssistant({ ...(workspace.researchAssistant ?? {}), status: 'error', source: 'live', provider: response.trace?.providerId ?? null, model: response.trace?.model ?? null, errorMessage });
+      const failed = persistProjectBrain({ ...current, researchWorkspace: { ...workspace, researchAssistant: failedAssistant }, updatedAt: now() });
+      await db.projects.put(failed);
+      set((state) => ({ projects: state.projects.map((item) => item.id === projectId ? failed : item), aiJob: { status: 'failed', message: errorMessage } }));
+      return failed;
+    }
+    const timestamp = now();
+    const assistant = createResearchAssistant({
+      status: normalized.questionPlans.length < workspace.questions.length ? 'partial' : 'success',
+      source: 'live',
+      provider: response.trace?.providerId,
+      model: response.trace?.model,
+      runId: response.runId,
+      generatedAt: timestamp,
+      ...normalized,
+      note: '真实 Text AI 只生成检索线索与证据标准；它没有联网，也没有生成或验证任何来源。请打开检索结果，补充 URL 与原文摘录后再采纳。',
+    });
+    const nextWorkspace = { ...workspace, researchAssistant: assistant };
+    const next = persistProjectBrain({ ...current, researchWorkspace: nextWorkspace, updatedAt: timestamp });
+    await db.projects.put(next);
+    set((state) => ({ projects: state.projects.map((item) => item.id === projectId ? next : item), aiJob: { status: 'success', message: `真实 DeepSeek 已生成 ${assistant.questionPlans.length} 条研究计划；请用线索寻找并确认真实来源。` } }));
     return next;
   },
 

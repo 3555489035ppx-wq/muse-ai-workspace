@@ -3,10 +3,12 @@ import assert from "node:assert/strict";
 import {
   acceptResearchEvidence,
   createCandidateEvidence,
+  createResearchAssistant,
   createResearchSource,
   createResearchWorkspace,
   getResearchLenses,
   getResearchQuestions,
+  normalizeResearchAssistantResult,
   recomputeResearchWorkspace,
   researchQualityReview,
 } from "../src/lib/ai/researchEvidenceProvider.js";
@@ -57,6 +59,22 @@ test("non-DAYTIDE projects remain in Limited Research Mode instead of receiving 
   assert.equal(workspace.evidence.length, 0);
   assert.equal(workspace.mode, "limited");
   assert.equal(workspace.providerStatus, "unavailable");
+});
+
+test("AI research assistant normalizes plans without creating evidence", () => {
+  const workspace = createResearchWorkspace({ project: { id: "other", name: "工业净化设备" }, brief: industrialBrief });
+  const result = normalizeResearchAssistantResult({
+    questionPlans: [
+      { questionId: "rq-1", whyThisMatters: "核心任务决定产品是否真正可用。", evidenceNeed: "需要观察动作顺序和中断位置。", querySuggestions: ["便携净化设备 单手操作 用户观察", "空气净化器 夜间操作 任务研究"], preferredSources: ["用户观察", "可用性报告"] },
+      { questionId: "unknown", whyThisMatters: "不应保留", evidenceNeed: "不应保留", querySuggestions: ["无效线索一", "无效线索二"], preferredSources: ["网页"] },
+    ],
+    gaps: ["缺少真实用户动作记录"],
+    nextActions: ["打开检索词并添加带原文摘录的来源"],
+  }, workspace.questions);
+  assert.equal(result.questionPlans.length, 1);
+  assert.equal(result.questionPlans[0].questionId, "rq-1");
+  assert.equal(createResearchAssistant({ status: "success", questionPlans: result.questionPlans }).status, "success");
+  assert.equal(workspace.evidence.length, 0);
 });
 
 test("a URL without source excerpt cannot be verified", () => {

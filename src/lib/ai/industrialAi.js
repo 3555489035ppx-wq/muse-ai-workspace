@@ -14,7 +14,7 @@ function liveReady(capabilities, kind) {
   return Boolean(capabilities?.providers?.[kind]?.ready);
 }
 
-const purposeStages = { overview: "brief", research: "research", insight: "insight", direction: "direction", exploration: "concept", concept: "concept", visual_brief: "visual", moodboard: "cmf", cmf: "cmf", review: "review", version: "version", decision_map: "decision-map", prompt: "visual", project_brain: "brief" };
+const purposeStages = { overview: "brief", research: "research", research_plan: "research", insight: "insight", direction: "direction", exploration: "concept", concept: "concept", visual_brief: "visual", moodboard: "cmf", cmf: "cmf", review: "review", version: "version", decision_map: "decision-map", prompt: "visual", project_brain: "brief" };
 
 function conceptCount(value) {
   return Array.isArray(value?.concepts) ? value.concepts.length : 0;
@@ -179,6 +179,20 @@ export function researchInstruction(project, industrial) {
   return `请对已有研究材料做真实的 Research Interpretation（研究解读），不要创造新的来源、访谈、数据、链接或外部事实。输出 {"evidence":[...]}，evidence 数量必须与输入材料一致或更少；每一条必须使用输入中的 id 或 sourceId，保留 originalExcerpt/fact 的原文事实，只补充 interpretation、designImplication 和 limitation。不要输出新的证据卡片，不要把设计建议伪装成事实。\n项目：${project.name}\n目标：${industrial.brief.goal}\n用户：${industrial.brief.targetUser}\n场景：${industrial.brief.scenario}\n设计问题：${industrial.brief.keyNeeds.join("；")}\n输入材料：${JSON.stringify(records)}`;
 }
 
+export function researchPlanInstruction(project, industrial) {
+  const workspace = project?.researchWorkspace ?? {};
+  const questions = (workspace.questions ?? []).map((item) => ({ id: item.id, question: item.label }));
+  const lenses = (workspace.lenses ?? []).map((item) => ({ id: item.id, label: item.label, description: item.description }));
+  const existingSources = (workspace.sources ?? []).slice(0, 8).map((item) => ({
+    id: item.id,
+    name: item.name,
+    type: item.type,
+    hasExcerpt: Boolean(item.originalExcerpt),
+    sourceUrl: item.sourceUrl ?? null,
+  }));
+  return `你是 Muse 的 AI Research Assistant（研究助手），负责把模糊的设计命题转成用户可以立即执行的研究计划。只输出 JSON，不输出 Markdown。\n\n重要边界：你不能联网，也不能声称已经找到任何真实来源；禁止编造访谈、统计数字、竞品事实、文章标题、链接、发布日期或用户结论。querySuggestions 只能是检索词，不是检索结果；preferredSources 只能写来源类型。所有判断都必须写成待验证的研究方向，不得把 AI 推断当成 evidence（研究证据）。\n\n请为每个输入的 research question 生成一条 questionPlan：保留原 questionId，不新增或改写研究问题；说明 whyThisMatters、evidenceNeed、2—4 个具体检索词、2—4 种优先来源类型。检索词要包含本项目的用户、场景或产品语境，避免“用户需求”“行业趋势”这类空词。再给出 gaps（信息缺口）与 nextActions（用户下一步动作）。如果已有来源，只能说明哪些问题尚未覆盖，不能把来源名称当成事实。\n\n项目：${project.name}\n设计目标：${industrial.brief.goal}\n目标用户：${industrial.brief.targetUser}\n核心场景：${industrial.brief.scenario}\n设计问题：${industrial.brief.keyNeeds.join("；")}\n研究问题：${JSON.stringify(questions)}\n研究镜头：${JSON.stringify(lenses)}\n已有来源摘要：${JSON.stringify(existingSources)}\n输出结构：{"questionPlans":[{"questionId":"existing-question-id","whyThisMatters":"string","evidenceNeed":"string","querySuggestions":["string"],"preferredSources":["string"]}],"gaps":["string"],"nextActions":["string"]}`;
+}
+
 export function insightInstruction(project, industrial) {
   const accepted = (project?.researchWorkspace?.evidence ?? industrial?.evidence ?? []).filter((item) => item.userStatus === "accepted" || item.accepted === true || item.status === "accepted");
   const evidence = accepted.map((item) => ({ id: item.id, title: item.title, sourceTitle: item.sourceTitle ?? item.sourceName, fact: item.originalExcerpt ?? item.fact, interpretation: item.interpretation, designImplication: item.designImplication }));
@@ -231,6 +245,7 @@ export const industrialSchemaHints = {
   overview: { projectName: "string", projectType: ["产品设计"], location: "string|null", timeContext: "string|null", projectSummary: "string", designGoal: "string", coreConflict: { title: "string", explanation: "string" }, targetUser: { primary: "string", traits: ["string"] }, keywords: ["string"], mustKeep: ["string"], mustAvoid: ["string"], deliverables: ["string"], successCriteria: ["string"], openQuestions: ["string"] },
   brief: { goal: "string", targetUser: "string", scenario: "string", keyNeeds: ["string"], unknowns: ["string"], interpretation: "string", keywords: ["string"], avoid: ["string"] },
   research: { evidence: [{ id: "existing-evidence-id", sourceId: "existing-source-id", title: "string", fact: "original fact", interpretation: "string", designImplication: "string", limitation: "string" }] },
+  researchPlan: { questionPlans: [{ questionId: "existing-question-id", whyThisMatters: "string", evidenceNeed: "string", querySuggestions: ["string"], preferredSources: ["string"] }], gaps: ["string"], nextActions: ["string"] },
   insight: { insights: [{ id: "string", title: "string", insightStatement: "string", whyItMatters: "string", designImplication: "string", evidenceIds: ["accepted-evidence-id"], evidenceStrength: "strong|medium|preliminary", relatedBriefFields: ["string"] }] },
   direction: { candidates: [{ strategyKey: "string", name: "string", thesis: "string", strategicIdea: "string" }], directions: [{ code: "A|B|C", name: "string", thesis: "string", strategicIdea: "string", userValue: "string", evidenceIds: ["accepted-evidence-id"], insightIds: ["confirmed-insight-id"], brandLogic: "string", culturalLogic: "string", visualLogic: "string", spatialLogic: "string", experienceLogic: "string", interactionLogic: "string", formLogic: "string", materialLogic: "string", advantages: ["string"], tradeoffs: ["string"], risks: ["string"], validationQuestions: ["string"], successSignals: ["string"], mustKeep: ["string"], mustAvoid: ["string"], supportLevel: "supported|partial|preliminary", status: "candidate" }] },
   concept: { concepts: [{ id: "string", name: "string", conceptStatement: "string", coreMechanism: "string", userExperience: "string", whyFitsDirection: "string", brandExpression: "string", spatialExpression: "string", productExpression: "string", digitalExpression: "string", evidenceIds: ["string"], insightIds: ["string"], advantages: ["string"], risks: ["string"], validationQuestions: ["string"] }] },

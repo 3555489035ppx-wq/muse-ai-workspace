@@ -18,7 +18,7 @@ export const aiProjectCommandSchema = z.object({
 });
 
 export const structuredAiRequestSchema = aiProjectCommandSchema.extend({
-  purpose: z.enum(["overview", "research", "insight", "moodboard", "direction", "exploration", "prompt", "review", "version", "project_brain", "concept", "visual_brief", "cmf", "decision_map"]),
+  purpose: z.enum(["overview", "research", "research_plan", "insight", "moodboard", "direction", "exploration", "prompt", "review", "version", "project_brain", "concept", "visual_brief", "cmf", "decision_map"]),
   instruction: z.string().trim().min(1).max(12_000),
   schemaHint: z.record(z.string(), z.unknown()).optional(),
   enableSearch: z.boolean().default(false),

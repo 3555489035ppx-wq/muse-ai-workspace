@@ -304,6 +304,31 @@ export interface ResearchHypothesisRecord {
   readonly howToValidate: string;
 }
 
+export interface ResearchAssistantPlan {
+  readonly id: string;
+  readonly questionId: string;
+  readonly question: string;
+  readonly whyThisMatters: string;
+  readonly evidenceNeed: string;
+  readonly querySuggestions: readonly string[];
+  readonly preferredSources: readonly string[];
+}
+
+export interface ResearchAssistantState {
+  readonly schemaVersion: 1;
+  readonly status: "idle" | "processing" | "success" | "partial" | "error";
+  readonly source: "none" | "live" | "user";
+  readonly provider?: string | null;
+  readonly model?: string | null;
+  readonly runId?: string | null;
+  readonly generatedAt?: string | null;
+  readonly questionPlans: readonly ResearchAssistantPlan[];
+  readonly gaps: readonly string[];
+  readonly nextActions: readonly string[];
+  readonly errorMessage?: string | null;
+  readonly note: string;
+}
+
 export interface ResearchWorkspace {
   readonly schemaVersion: 3;
   readonly projectId: string;
@@ -315,6 +340,7 @@ export interface ResearchWorkspace {
   readonly sources: readonly ResearchSourceRecord[];
   readonly evidence: readonly ResearchEvidenceRecord[];
   readonly hypotheses: readonly ResearchHypothesisRecord[];
+  readonly researchAssistant?: ResearchAssistantState;
   readonly plan?: readonly { id: string; questionId: string; order: number; status: string; label: string }[];
   readonly evidenceLimited: boolean;
   readonly researchSummary: string;
