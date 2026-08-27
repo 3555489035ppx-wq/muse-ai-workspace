@@ -2058,6 +2058,12 @@
 .app-shell--industrial .research-v2__assistant-note p { margin: 0; color: #9fb8b9; font-size: 12px; line-height: 1.6; }
 .app-shell--industrial .research-v2__assistant-note strong { display: block; margin-top: 3px; color: #c4d8d6; font-size: 12px; font-weight: 650; }
 .app-shell--industrial .research-v2__assistant-error { display: flex; align-items: start; gap: 8px; margin-bottom: 12px; padding: 11px 13px; border: 1px solid rgba(230, 140, 140, .25); border-radius: 9px; background: rgba(230, 140, 140, .06); color: #e5aaaa; font-size: 13px; line-height: 1.55; }
+.app-shell--industrial .research-v2__search-config { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 12px; padding: 12px 14px; border: 1px solid rgba(222, 181, 125, .27); border-radius: 9px; background: rgba(222, 181, 125, .07); color: #e2c99e; }
+.app-shell--industrial .research-v2__search-config > svg { flex: none; margin-top: 2px; }
+.app-shell--industrial .research-v2__search-config div { min-width: 0; }
+.app-shell--industrial .research-v2__search-config strong { display: block; color: #f1ddba; font-size: 13px; }
+.app-shell--industrial .research-v2__search-config p { margin: 4px 0 0; color: #c7b79b; font-size: 12px; line-height: 1.6; }
+.app-shell--industrial .research-v2__search-config code { color: #f0d6a6; font: 650 11px ui-monospace, SFMono-Regular, Consolas, monospace; }
 .app-shell--industrial .industrial-ai-toolbar__secondary { border-color: rgba(168, 203, 237, .25); background: rgba(168, 203, 237, .08); color: #b9d6eb; }
 .app-shell--industrial .research-v2__focus { margin-top: 16px; padding: 22px 24px; }
 .app-shell--industrial .research-v2__focus > header { display: flex; align-items: start; justify-content: space-between; gap: 16px; }

@@ -127,7 +127,13 @@ export async function requestIndustrialStructured({ project, purpose, instructio
 export async function requestIndustrialResearchSearch({ project, query, questionId, maxResults = 5 }) {
   try {
     const capabilities = await client.capabilities();
-    if (!liveReady(capabilities, "search")) return { source: "unavailable", result: null, capabilities };
+    const searchCapability = capabilities?.providers?.search;
+    if (!liveReady(capabilities, "search")) return {
+      source: "unavailable",
+      result: null,
+      capabilities,
+      errorCode: searchCapability?.configured ? "SEARCH_PROVIDER_DISABLED" : "SEARCH_PROVIDER_NOT_CONFIGURED",
+    };
     const result = await client.researchSearch({
       projectId: project.id,
       query,

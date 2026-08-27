@@ -54,7 +54,15 @@ function acceptedEvidenceFor(project: AnyRecord, industrial: AnyRecord) {
 
 function confirmedInsightsFor(project: AnyRecord, industrial: AnyRecord) {
   const source = asRecords(project.designInsights?.insights ?? project.designInsights ?? industrial.insights);
+  const selectedIds = project.confirmedInsightIds ?? industrial.selectedInsightIds;
+  const demoSelection = isDemoPortfolioProject(project) && Array.isArray(selectedIds)
+    ? new Set(selectedIds.map(String))
+    : null;
   return source.map((item) => normalizeInsight(item, String(project.id))).filter((item: AnyRecord) => {
+    // Demo portfolio records intentionally contain more candidate insights than
+    // the human-confirmed subset. Always honour the explicit selection so the
+    // UI gate and the decision map tell the same story, even for legacy seeds.
+    if (demoSelection?.size) return demoSelection.has(String(item.id));
     if (item.status === "confirmed" || item.confirmed === true || industrial.selectedInsightIds?.includes(item.id)) return true;
     return isDemoPortfolioProject(project) && item.status !== "rejected";
   });

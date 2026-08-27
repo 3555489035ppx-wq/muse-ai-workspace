@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { ToastStack } from "./components/ui";
 import { MigrationService } from "./domain/services/MigrationService";
 import { db } from "./db/database";
@@ -34,6 +34,18 @@ const MusePortfolioPage = lazyNamed(() => import("./portfolio/muse"), "MusePortf
 const MuseShowreelPage = lazyNamed(() => import("./portfolio/muse/ShowreelPage"), "MuseShowreelPage");
 const Phase0DebugPage = import.meta.env.DEV ? lazyNamed(() => import("./features/dev/Phase0DebugPage"), "Phase0DebugPage") : null;
 const migrationService = new MigrationService(db);
+
+function ProjectUnderstandingRouteGuard({ children }) {
+  const { projectId } = useParams();
+  const { pathname } = useLocation();
+  const project = useMuseStore((state) => state.projects.find((item) => item.id === projectId));
+  const status = project?.projectUnderstandingStatus;
+  const pending = status === "queued" || status === "running";
+  if (projectId && pending && !pathname.endsWith("/creating")) {
+    return <Navigate to={`/projects/${projectId}/creating`} replace state={{ returnTo: pathname }} />;
+  }
+  return children;
+}
 
 function Startup() {
   const { pathname, search } = useLocation();
@@ -86,22 +98,22 @@ function Startup() {
         <Route path="/portfolio/muse/showreel" element={<MuseShowreelPage />} />
         <Route path="/projects/new" element={<NewProjectPage />} />
         <Route path="/projects/:projectId/creating" element={<ProjectCreationProgressPage />} />
-        <Route path="/projects/:projectId/overview" element={<IndustrialOverviewPage />} />
-        <Route path="/projects/:projectId/workspace" element={<IndustrialOverviewPage />} />
-        <Route path="/projects/:projectId/brief" element={<IndustrialBriefPage />} />
-        <Route path="/projects/:projectId/research" element={<IndustrialResearchPage />} />
-        <Route path="/projects/:projectId/insight" element={<IndustrialInsightPage />} />
-        <Route path="/projects/:projectId/moodboard" element={<IndustrialInsightPage />} />
-        <Route path="/projects/:projectId/direction" element={<IndustrialDirectionPage />} />
-        <Route path="/projects/:projectId/directions" element={<IndustrialDirectionPage />} />
-        <Route path="/projects/:projectId/concept" element={<IndustrialConceptPage />} />
-        <Route path="/projects/:projectId/exploration" element={<IndustrialConceptPage />} />
-        <Route path="/projects/:projectId/cmf" element={<IndustrialCMFPage />} />
-        <Route path="/projects/:projectId/review" element={<IndustrialReviewPage />} />
-        <Route path="/projects/:projectId/critique" element={<IndustrialReviewPage />} />
-        <Route path="/projects/:projectId/generation" element={<IndustrialConceptPage />} />
-        <Route path="/projects/:projectId/versions" element={<IndustrialVersionsPage />} />
-        <Route path="/projects/:projectId/decision-map" element={<IndustrialDecisionMapPage />} />
+        <Route path="/projects/:projectId/overview" element={<ProjectUnderstandingRouteGuard><IndustrialOverviewPage /></ProjectUnderstandingRouteGuard>} />
+        <Route path="/projects/:projectId/workspace" element={<ProjectUnderstandingRouteGuard><IndustrialOverviewPage /></ProjectUnderstandingRouteGuard>} />
+        <Route path="/projects/:projectId/brief" element={<ProjectUnderstandingRouteGuard><IndustrialBriefPage /></ProjectUnderstandingRouteGuard>} />
+        <Route path="/projects/:projectId/research" element={<ProjectUnderstandingRouteGuard><IndustrialResearchPage /></ProjectUnderstandingRouteGuard>} />
+        <Route path="/projects/:projectId/insight" element={<ProjectUnderstandingRouteGuard><IndustrialInsightPage /></ProjectUnderstandingRouteGuard>} />
+        <Route path="/projects/:projectId/moodboard" element={<ProjectUnderstandingRouteGuard><IndustrialInsightPage /></ProjectUnderstandingRouteGuard>} />
+        <Route path="/projects/:projectId/direction" element={<ProjectUnderstandingRouteGuard><IndustrialDirectionPage /></ProjectUnderstandingRouteGuard>} />
+        <Route path="/projects/:projectId/directions" element={<ProjectUnderstandingRouteGuard><IndustrialDirectionPage /></ProjectUnderstandingRouteGuard>} />
+        <Route path="/projects/:projectId/concept" element={<ProjectUnderstandingRouteGuard><IndustrialConceptPage /></ProjectUnderstandingRouteGuard>} />
+        <Route path="/projects/:projectId/exploration" element={<ProjectUnderstandingRouteGuard><IndustrialConceptPage /></ProjectUnderstandingRouteGuard>} />
+        <Route path="/projects/:projectId/cmf" element={<ProjectUnderstandingRouteGuard><IndustrialCMFPage /></ProjectUnderstandingRouteGuard>} />
+        <Route path="/projects/:projectId/review" element={<ProjectUnderstandingRouteGuard><IndustrialReviewPage /></ProjectUnderstandingRouteGuard>} />
+        <Route path="/projects/:projectId/critique" element={<ProjectUnderstandingRouteGuard><IndustrialReviewPage /></ProjectUnderstandingRouteGuard>} />
+        <Route path="/projects/:projectId/generation" element={<ProjectUnderstandingRouteGuard><IndustrialConceptPage /></ProjectUnderstandingRouteGuard>} />
+        <Route path="/projects/:projectId/versions" element={<ProjectUnderstandingRouteGuard><IndustrialVersionsPage /></ProjectUnderstandingRouteGuard>} />
+        <Route path="/projects/:projectId/decision-map" element={<ProjectUnderstandingRouteGuard><IndustrialDecisionMapPage /></ProjectUnderstandingRouteGuard>} />
         {import.meta.env.DEV && Phase0DebugPage ? <Route path="/dev/phase0-debug" element={<Phase0DebugPage />} /> : null}
         <Route path="*" element={<Navigate to="/projects" replace />} />
       </Routes></Suspense>
