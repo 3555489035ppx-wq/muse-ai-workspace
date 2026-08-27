@@ -147,8 +147,8 @@ test("uses a site-managed text provider without a visitor API key", async () => 
     MUSE_SITE_TEXT_PROVIDER: "deepseek",
     MUSE_SITE_TEXT_DISPLAY_NAME: "Muse Text AI",
     MUSE_SITE_TEXT_API_KEY: "site-owned-secret",
-    MUSE_SITE_TEXT_BASE_URL: "https://api.deepseek.com",
-    MUSE_SITE_TEXT_MODEL: "deepseek-v4-pro",
+    MUSE_SITE_TEXT_BASE_URL: "",
+    MUSE_SITE_TEXT_MODEL: "",
     MUSE_UPSTREAM_FETCH: async (input, init) => {
       upstreamCalls.push({ input: String(input), authorization: init.headers.authorization, body: JSON.parse(init.body) });
       return new Response(JSON.stringify({
@@ -178,6 +178,7 @@ test("uses a site-managed text provider without a visitor API key", async () => 
   assert.equal(payload.data.result.projectSummary, "真实模型建议");
   assert.equal(upstreamCalls.length, 1);
   assert.equal(upstreamCalls[0].authorization, "Bearer site-owned-secret");
+  assert.equal(upstreamCalls[0].input, "https://api.deepseek.com/chat/completions");
   assert.equal(upstreamCalls[0].body.model, "deepseek-v4-pro");
   assert.doesNotMatch(JSON.stringify(payload), /site-owned-secret/);
 
